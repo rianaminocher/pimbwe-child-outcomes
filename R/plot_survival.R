@@ -1,17 +1,17 @@
-library(rethinking)
-library(cowplot)
-library(ggplot2)
-library(xtable)
-
 # plot full results for child survival models
 
-fit <- readRDS("stanfits/father_survival.rds")
+# mother model
+
+# read model fit
+
+fit <- readRDS("stanfits/mother_survival.rds")
 
 # check fit
+# plot trace of all main parameters
 
-png("output/trace/father_survival.png", 
+png("output/trace/mother_survival.png", 
     res = 250, 
-    height = 3000, 
+    height = 3000,  
     width = 3000)
 
 print(traceplot(fit, pars = c("alpha",  
@@ -29,7 +29,7 @@ print(traceplot(fit, pars = c("alpha",
                               "sum_parent_sigma")))
 dev.off()
 
-# print summary table
+# print summary table for all main parameters
 
 tab <- precis(fit, 3, pars = c("alpha",  
                                "a_bo_tau", 
@@ -61,7 +61,6 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_7}$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
-                   "$\\beta_{\\tau_{10}}$",
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -71,7 +70,6 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_7}$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
-                   "$\\beta_{\\kappa_{10}}$",
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -81,13 +79,12 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_7}$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
-                   "$\\beta_{\\delta_{10}}$",
                    "$\\kappa_{\\sigma}$", 
                    "$\\eta_{\\sigma}$", 
                    "$\\pi_{\\sigma}$")
 
 print(xtable(tab), 
-      file = "output/tables/summary_father_survival.txt", 
+      file = "output/tables/summary_mother_survival.txt", 
       only.contents = TRUE, 
       sanitize.rownames.function = function(x) {x})
 
@@ -95,9 +92,9 @@ print(xtable(tab),
 
 post <- extract.samples(fit)
 
-# check out father effects
+# plot parent random effects
 
-png("output/figures/survival_father_random_effects.png", 
+png("output/figures/survival_mother_random_effects.png", 
     res = 250,
     height = 1000, 
     width = 2800)
@@ -117,10 +114,11 @@ dens(post$father_sigma + post$mother_sigma,
 
 dev.off()
 
-# plot predictions for base case
+# plot predictions for base case (biological 2-parent)
 
 plot_data <- list()
 
+# loop over sex
 sex <- c("girls", "boys")
 
 for (s in 1:2) {
@@ -162,14 +160,16 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(1, "cm"), 
         legend.position = c(0.2, 0.2),
         legend.background = element_rect(linetype = "solid", color = "black"),
         legend.text = element_text(size = 10), 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) +
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   scale_color_manual(values = c("girls" = "goldenrod", 
                                 "boys" = "navy")) +
@@ -177,7 +177,7 @@ ggplot(plot_data,
   scale_fill_manual(values = c("girls" = "goldenrod", 
                                "boys" = "navy")) + 
   
-  ggtitle("A. Cumulative probability of survival, across childhood")
+  ggtitle("A. Child survival")
 
 # plot age-specific parameters
 
@@ -221,15 +221,17 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  ggtitle("B. Age-specific effects")
+  ggtitle("Age-specific effects")
 
 # plot birth-order parameters
 
@@ -261,22 +263,24 @@ c <-
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  ggtitle("C. Birth-order effects")
+  ggtitle("Birth-order effects")
 
-# plot birth-year parameters
+# plot year parameters
 
 p <- post$a_year
 
 plot_data <- data.frame(year = 1930:2015, 
-                        cat = "birth-year", 
+                        cat = "year", 
                         mean = apply(p, 2, mean), 
                         upp = apply(p, 2, function(x) HPDI(x, 0.9))[1, ],
                         low = apply(p, 2, function(x) HPDI(x, 0.9))[2, ])
@@ -295,35 +299,38 @@ d <-
   
   ylab("estimate") +
   
-  xlab("birth-year") +
+  xlab("year of measurement") +
   
   geom_hline(yintercept = 0, col = col.alpha("indianred", 0.6), size = 1) +
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  ggtitle("D. Birth-year effects")
+  ggtitle("Year-specific effects")
 
 # plot deviations from base-case on prediction scale
+# i.e., diff between a family state and the bio 2-parent
 
-post_list <- list(post$m_father_dead,
-                  post$m_father_unmarried,
-                  post$m_father_married_to_notmother_monogamy,
-                  post$m_father_married_to_notmother_polygyny,
-                  post$m_father_married_to_mother_polygyny)
+post_list <- list(post$m_unknown_parent,
+                  post$m_mother_dead,
+                  post$m_mother_unmarried,
+                  post$m_mother_married_to_notfather,
+                  post$m_mother_married_to_father_with_cowife)
 
-type <- c("father dead", 
-          "father unmarried",
-          "father married \nto step-mother (monogamy)",
-          "father married \nto step-mother (polygyny)",
-          "father married \nto mother (polygyny)")
+type <- c("either parent external", 
+          "mother deceased",
+          "mother unmarried",
+          "mother married to \nstep-father",
+          "mother married to \nbio-father (with co-wife)")
 
 plot_data <- list()
 
@@ -343,11 +350,11 @@ for (z in 1:5) {
 
 plot_data <- do.call(rbind, plot_data)
 
-plot_data$type <- factor(plot_data$type, levels = c("father dead",
-                                                    "father unmarried",
-                                                    "father married \nto step-mother (monogamy)", 
-                                                    "father married \nto step-mother (polygyny)",
-                                                    "father married \nto mother (polygyny)"))
+plot_data$type <- factor(plot_data$type, levels = c("either parent external", 
+                                                    "mother deceased",
+                                                    "mother unmarried",
+                                                    "mother married to \nstep-father",
+                                                    "mother married to \nbio-father (with co-wife)"))
 
 e <- 
   
@@ -364,29 +371,33 @@ ggplot(plot_data,
   
   facet_grid(. ~ type) +
   
+  ylim(c(-0.5, 0.2)) +
+  
   labs(y = "contrast", 
        x = "child age") +
   
   theme(strip.text.x = element_text(size = 10), 
         strip.text.y = element_text(size = 10, angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 13, face = "italic"),
-        plot.margin = unit(c(5.5, 0, 5.5, 0), "points")) +
+        plot.margin = unit(c(5.5, 0, 5.5, 0), "points"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   geom_hline(yintercept = 0, size = 1.1, color = col.alpha("firebrick", 0.5)) +
   
-  scale_color_manual(values = c("father dead" = "navy",
-                                "father unmarried" = "goldenrod",
-                                "father married \nto step-mother (monogamy)" = "cyan4",
-                                "father married \nto step-mother (polygyny)" = "sienna4",
-                                "father married \nto mother (polygyny)" = "purple4")) +
+  scale_color_manual(values = c("either parent external" = "chocolate3", 
+                                "mother deceased" = "navy",
+                                "mother unmarried" = "goldenrod",
+                                "mother married to \nstep-father" = "cyan4",
+                                "mother married to \nbio-father (with co-wife)" = "purple4")) +
   
-  ggtitle("E. Age-specific contrasts in survival for children experiencing different father-states")
+  ggtitle("B. Age-specific contrasts in survival for children experiencing different mother-states")
 
 # produce estimates reported in-text
 
@@ -395,18 +406,38 @@ ggplot(plot_data,
 mean(post$m_base[, 2, 2] - post$m_base[, 1, 2])
 HPDI(post$m_base[, 2, 2] - post$m_base[, 1, 2], prob = 0.9)
 
-# father unknown
+# mother/father unknown
 
 mean(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19])
 HPDI(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19], prob = 0.9)
 
-# mother model
+# mother dead
 
-fit <- readRDS("stanfits/mother_survival.rds")
+mean(post$m_mother_dead[, 1, 1])
+HPDI(post$m_mother_dead[, 1, 1], 0.9)
+
+mean(post$m_base[, 1, 1] - post$m_mother_dead[, 1, 1])
+HPDI(post$m_base[, 1, 1] - post$m_mother_dead[, 1, 1], 0.9)
+
+mean(post$m_base[, 1, 1])
+HPDI(post$m_base[, 1, 1], 0.9)
+
+mean(post$m_mother_dead[, 1, 19])
+HPDI(post$m_mother_dead[, 1, 19], 0.9)
+
+mean(post$m_base[, 1, 19] - post$m_mother_dead[, 1, 19])
+HPDI(post$m_base[, 1, 19] - post$m_mother_dead[, 1, 19], 0.9)
+
+mean(post$m_base[, 1, 19])
+HPDI(post$m_base[, 1, 19], 0.9)
+
+# father model
+
+fit <- readRDS("stanfits/father_survival.rds")
 
 # check fit
 
-png(paste0("output/trace/mother_survival.png"), 
+png(paste0("output/trace/father_survival.png"), 
     res = 250, 
     height = 3000, 
     width = 3000)
@@ -458,6 +489,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_7}$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
+                   "$\\beta_{\\tau_{10}}$",
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -467,6 +499,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_7}$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
+                   "$\\beta_{\\kappa_{10}}$",
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -476,6 +509,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_7}$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
+                   "$\\beta_{\\delta_{10}}$",
                    "$\\kappa_{\\sigma}$", 
                    "$\\eta_{\\sigma}$", 
                    "$\\pi_{\\sigma}$")
@@ -491,7 +525,7 @@ post <- extract.samples(fit)
 
 # check mother effects
 
-png("output/figures/survival_mother_random_effects.png", 
+png("output/figures/survival_father_random_effects.png", 
     res = 250,
     height = 1000, 
     width = 2800)
@@ -513,17 +547,17 @@ dev.off()
 
 # plot deviations from base-case on prediction scale
 
-post_list <- list(post$m_mother_dead,
-                  post$m_mother_unmarried,
-                  post$m_mother_married_to_notfather,
-                  post$m_mother_married_to_father_with_cowife,
-                  post$m_unknown_parent)
+post_list <- list(post$m_father_dead,
+                  post$m_father_unmarried,
+                  post$m_father_married_to_notmother_monogamy,
+                  post$m_father_married_to_notmother_polygyny,
+                  post$m_father_married_to_mother_polygyny)
 
-type <- c("mother dead", 
-          "mother unmarried",
-          "mother married \nto step-father",
-          "mother married \nto father (with co-wife)",
-          "mother or father unknown")
+type <- c("father deceased", 
+          "father unmarried",
+          "father married to one \nstep-mother",
+          "father polygynously married \n(w/o bio-mother)",
+          "father polygynously married \n(with bio-mother)")
 
 plot_data <- list()
 
@@ -543,11 +577,12 @@ for (z in 1:5) {
 
 plot_data <- do.call(rbind, plot_data)
 
-plot_data$type <- factor(plot_data$type, levels = c("mother dead", 
-                                                    "mother unmarried",
-                                                    "mother married \nto step-father",
-                                                    "mother married \nto father (with co-wife)",
-                                                    "mother or father unknown"))
+plot_data$type <- factor(plot_data$type, levels = c("father deceased", 
+                                                    "father unmarried",
+                                                    "father married to one \nstep-mother",
+                                                    "father polygynously married \n(w/o bio-mother)",
+                                                    "father polygynously married \n(with bio-mother)"))
+
 f <-
 
 ggplot(plot_data, 
@@ -561,6 +596,8 @@ ggplot(plot_data,
   
   geom_pointrange(size = 0.6) +
   
+  ylim(c(-0.5, 0.2)) +
+  
   facet_grid(. ~ type) +
   
   labs(y = "contrast", 
@@ -568,50 +605,26 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10), 
         strip.text.y = element_text(size = 10, angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 13, face = "italic"), 
-        plot.margin = unit(c(5.5, 0, 5.5, 0), "points")) +
+        plot.margin = unit(c(5.5, 0, 5.5, 0), "points"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   geom_hline(yintercept = 0, size = 1.1, color = col.alpha("firebrick", 0.5)) +
   
-  scale_color_manual(values = c("mother dead" = "navy",
-                                "mother unmarried" = "goldenrod",
-                                "mother married \nto step-father" = "cyan4",
-                                "mother married \nto father (with co-wife)" = "purple4",
-                                "mother or father unknown" = "chocolate3")) +
+  scale_color_manual(values = c("father deceased" = "navy", 
+                                "father unmarried" = "goldenrod",
+                                "father married to one \nstep-mother"  = "cyan4",
+                                "father polygynously married \n(w/o bio-mother)" = "sienna4",
+                                "father polygynously married \n(with bio-mother)"  = "purple4")) +
 
-  ggtitle("F. Age-specific contrasts in survival for children experiencing different mother-states")
-
-# produce estimates reported in-text
-
-mean(post$m_mother_dead[, 1, 1])
-HPDI(post$m_mother_dead[, 1, 1], 0.9)
-
-mean(post$m_base[, 1, 1] - post$m_mother_dead[, 1, 1])
-HPDI(post$m_base[, 1, 1] - post$m_mother_dead[, 1, 1], 0.9)
-
-mean(post$m_base[, 1, 1])
-HPDI(post$m_base[, 1, 1], 0.9)
-
-mean(post$m_mother_dead[, 1, 19])
-HPDI(post$m_mother_dead[, 1, 19], 0.9)
-
-mean(post$m_base[, 1, 19] - post$m_mother_dead[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_mother_dead[, 1, 19], 0.9)
-
-mean(post$m_base[, 1, 19])
-HPDI(post$m_base[, 1, 19], 0.9)
-
-# mother unknown
-# same as father unknown
-
-mean(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19], prob = 0.9)
+  ggtitle("C. Age-specific contrasts in survival for children experiencing different father-states")
 
 # plot them all
 
@@ -633,7 +646,7 @@ tmp4 <- plot_grid(tmp3,
                   nrow = 3, 
                   rel_heights = c(1.1, 0.6, 0.6))
 
-png("output/figures/survival.png",
+png("output/figures/survival_big.png",
     res = 250, 
     height = 2600, 
     width = 3000)
@@ -641,3 +654,42 @@ png("output/figures/survival.png",
 print(tmp4)
 
 dev.off()
+
+tmp <- plot_grid(e,
+                 f, 
+                 nrow = 2)
+
+tmp2 <- plot_grid(a, 
+                  tmp,
+                  rel_widths = c(1.5, 3, 3))
+
+pdf("output/figures/survival.pdf",
+    height = 5.5, 
+    width = 14.6)
+
+print(tmp2)
+
+dev.off()
+
+# plot separately for supp
+
+pdf("output/figures/survival_age_effects.pdf",
+    height = 3.5, 
+    width = 10)
+
+print(b)
+
+dev.off()
+
+tmp <- plot_grid(c,
+                 d, 
+                 rel_widths = c(1.5, 2.5))
+
+pdf("output/figures/survival_birth_effects.pdf",
+    height = 3.5, 
+    width = 10.5)
+
+print(tmp)
+
+dev.off()
+

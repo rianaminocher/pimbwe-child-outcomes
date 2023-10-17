@@ -21,15 +21,19 @@ load("processed_data/mother_married_to_notfather.robj")
 load("processed_data/mother_married_to_father_with_cowife.robj")
 
 n <- nrow(ppl)
+n == 3693
 
 # check if kids with missing parents have any missing predictor data
 
-any(is.na(ppl[is.na(ppl$father_id), ]$dob))
-which(is.na(ppl[is.na(ppl$father_id), ]$male))
-any(is.na(ppl[is.na(ppl$father_id), ]$birth_order))
+any(is.na(ppl[is.na(ppl$father_id), ]$dob)) # all kids have birth-years
+which(is.na(ppl[is.na(ppl$father_id), ]$male)) # missing sex
+any(is.na(ppl[is.na(ppl$father_id), ]$birth_order)) # none are missing birth-order
 
 ppl$missing_kid <- is.na(ppl$mother_id) | is.na(ppl$father_id)
 obs$missing_kid <- ppl$missing_kid[match(obs$id, ppl$id)]
+
+min(ppl$dob) == 1931
+max(ppl$dob) == 2014
 
 png("output/figures/hist_birthyear.png", 
     res = 250, 
@@ -52,12 +56,113 @@ plot(table(ppl$dob[!ppl$missing_kid]),
 
 dev.off()
 
+# how many children are observed retrospectively?
+# prospective = at least one height/weight/edu obs
+
+height_ids <- unique(obs[complete.cases(obs$height), ]$id)
+weight_ids <- unique(obs[complete.cases(obs$weight), ]$id)
+edu_ids <-  unique(obs[complete.cases(obs$edu), ]$id)
+
+prosp_ids <- unique(c(height_ids, weight_ids, edu_ids))
+retro_ids <- setdiff(ppl$id, prosp_ids)
+length(retro_ids) + length(prosp_ids) == nrow(ppl)
+
+any(!is.na(obs[obs$id %in% retro_ids, ]$height)) # none are observed
+
+# when are these retro kids born?
+
+table(ppl[ppl$id %in% retro_ids, ]$dob) # they are also born after 1995
+
+# how many died before 1995, these are certainly retro
+sum(ppl[ppl$id %in% retro_ids & !is.na(ppl$date_of_death), ]$date_of_death < 1995) # 515
+# how many censored before 1995?
+sum(ppl[ppl$id %in% retro_ids & !is.na(ppl$date_of_censor), ]$date_of_censor < 1995) # none
+
+# make observations by height, weight, edu histogram
+
+# height recorded by child 
+length(unique(obs[!is.na(obs$height), ]$id)) # 1139 kids measured at least once
+table(table(obs[!is.na(obs$height), ]$id)) # 501 children measured just once
+
+# weight recorded by child
+length(unique(obs[!is.na(obs$weight), ]$id)) # 1298 kids measured at least once
+table(table(obs[!is.na(obs$weight), ]$id)) # 526 children measured just once
+
+# education recorded by child 
+length(unique(obs[!is.na(obs$edu), ]$id)) # 1377 kids measured at least once
+table(table(obs[!is.na(obs$edu), ]$id)) # 439 children measured just once
+
+png("output/figures/long_obs_by_child.png",
+    res = 250,
+    height = 1000, 
+    width = 3000)
+
+par(mfrow = c(1, 3))
+
+var_list <- c("height", "weight", "edu")
+
+for (i in 1:3) {
+  
+  hist_by_child <- tapply(obs[, var_list[i]], obs$id, function(x) sum(!is.na(x)))
+  
+  plot(table(hist_by_child[hist_by_child > 0]), 
+       col = "slateblue", 
+       xlab = "number of observations", 
+       ylab = "frequency", 
+       lwd = 6, 
+       main = var_list[i], 
+       cex.lab = 2, 
+       cex.axis = 2,
+       cex.main = 3)
+  
+}
+
+dev.off()
+
+# sex of child unknown
+
+missing_sex <- ppl[is.na(ppl$male), ]
+nrow(missing_sex) # 278 unknown
+
+missing_sex$age <- NA
+
+for (i in 1:nrow(missing_sex)) {
+  
+  if (!is.na(missing_sex$date_of_death[i])) {
+    missing_sex$age[i] <- missing_sex$date_of_death[i] - missing_sex$dob[i] 
+  }
+  
+  else missing_sex$age[i] <- missing_sex$date_of_censor[i] - missing_sex$dob[i]
+  
+}
+
+missing_sex$baby <- ifelse(missing_sex$age <= 1, TRUE, FALSE)
+sum(!missing_sex$baby) == 120
+sum(missing_sex$baby) == 158
+
+missing_sex$born_before_95 <- ifelse(missing_sex$dob < 1995, TRUE, FALSE)
+
+table(missing_sex$baby & missing_sex$born_before_95)
+
+any(missing_sex$id %in% obs[!is.na(obs$edu), ]$id)
+any(missing_sex$id %in% obs[!is.na(obs$height), ]$id)
+any(missing_sex$id %in% obs[!is.na(obs$weight), ]$id)
+any(missing_sex$id %in% obs$id)
+
+sum(missing_sex[!missing_sex$baby, ]$missing_kid) == 83
+sum(!missing_sex[!missing_sex$baby, ]$missing_kid) == 37
+
+table(missing_sex[!missing_sex$missing_kid & !missing_sex$baby, ]$born_before_95)
+
+write.csv(missing_sex, 
+          "for_monique/kids_missing_sex.csv",
+          row.names = FALSE)
+
 # to make the new fig
 # make survival data as per model fit
 # two routes to censorship: 
-# child doesn't turn 18 before 2015
+# child doesn't turn 18 before 2015 (died or unobserved)
 # parent censored before 2015 
-# select out censor child-years
 
 alive <- matrix(nrow = n, ncol = 19)
 
@@ -133,35 +238,43 @@ for (i in 1:n) {
   }
 }
 
+# we should distinguish:
+# child censored
+# parent censored
+
 mother_state <- matrix(NA, nrow = n, ncol = 19)
 
 for (i in 1:n) {
       
   for (a in 1:19) {
     
-    # skips are censored + unknown
-    if (is.na(ppl$mother_id[i])) mother_state[i, a] <- "unknown parent"
-    # if (skip[i, a] == 1) mother_state[i, a] <- "unknown parent"
-    
-    # correct child censored
+    # correct child censored or died
     if (alive[i, a] == -99) mother_state[i, a] <- "child cens"
     
-    # if mother is dead
-    if (mother_dead[i, a] == 1) mother_state[i, a] <- "dead"
-    
-    if (mother_dead[i, a] == 0) {
+    if (alive[i, a] != -99) {
       
-      if (mother_unmarried[i, a] == 1) mother_state[i, a] <- "unmarried"
+      # skips are censored + unknown
+      if (is.na(ppl$mother_id[i])) mother_state[i, a] <- "unknown parent"
+      # if (skip[i, a] == 1) mother_state[i, a] <- "unknown parent"
       
-      if (mother_unmarried[i, a] == 0) {
+      # if mother is dead
+      if (mother_dead[i, a] == 1) mother_state[i, a] <- "dead"
+      
+      if (mother_dead[i, a] == 0) {
         
-        if (mother_married_to_notfather[i, a] == 1) mother_state[i, a] <- "married to step-father"
+        if (mother_unmarried[i, a] == 1) mother_state[i, a] <- "unmarried"
         
-        if (mother_married_to_notfather[i, a] == 0) {
+        if (mother_unmarried[i, a] == 0) {
           
-          if (mother_married_to_father_with_cowife[i, a] == 1) mother_state[i, a] <- "married to father with co-wife"
+          if (mother_married_to_notfather[i, a] == 1) mother_state[i, a] <- "married to step-father"
           
-          if (mother_married_to_father_with_cowife[i, a] == 0) mother_state[i, a] <- "married to father"
+          if (mother_married_to_notfather[i, a] == 0) {
+            
+            if (mother_married_to_father_with_cowife[i, a] == 1) mother_state[i, a] <- "married to father with co-wife"
+            
+            if (mother_married_to_father_with_cowife[i, a] == 0) mother_state[i, a] <- "married to father"
+            
+          }
           
         }
         
@@ -191,7 +304,7 @@ mother_state[which(mother_state == "married to step-father")] <- 4
 mother_state[which(mother_state == "married to father with co-wife")] <- 5
 mother_state[which(mother_state == "unknown parent")] <- 6
 mother_state[which(mother_state == "child cens")] <- 7
-mother_state[which(mother_state == "parent cens")] <- 7
+mother_state[which(mother_state == "parent cens")] <- 8
 
 mother_state <- matrix(as.numeric(mother_state), ncol = 19)
 
@@ -201,25 +314,28 @@ for (i in 1:n) {
   
   for (a in 1:19) {
     
-    # skips are censored + unknown
-    if (is.na(ppl$father_id[i])) father_state[i, a] <- "unknown parent"
-    # if (skip[i, a] == 1) mother_state[i, a] <- "unknown parent"
-    
     # correct child censored
     if (alive[i, a] == -99) father_state[i, a] <- "child cens"
     
-    if (father_dead[i, a] == 1) father_state[i, a] <- "dead"
-    
-    if (father_dead[i, a] == 0) {
+    if (alive[i, a] != -99) {
       
-      if (father_unmarried[i, a] == 1) father_state[i, a] <- "unmarried"
+      # skips are censored + unknown
+      if (is.na(ppl$father_id[i])) father_state[i, a] <- "unknown parent"
       
-      if (father_unmarried[i, a] == 0) {
+      if (father_dead[i, a] == 1) father_state[i, a] <- "dead"
+      
+      if (father_dead[i, a] == 0) {
         
-        if (father_married_to_mother_polygyny[i, a] == 0) father_state[i, a] <- "to mother (m)"
-        if (father_married_to_notmother_monogamy[i, a] == 1) father_state[i, a] <- "to step-mother (m)"
-        if (father_married_to_notmother_polygyny[i, a] == 1) father_state[i, a] <- "to step-mother (p)"
-        if (father_married_to_mother_polygyny[i, a] == 1) father_state[i, a] <- "to mother (p)"
+        if (father_unmarried[i, a] == 1) father_state[i, a] <- "unmarried"
+        
+        if (father_unmarried[i, a] == 0) {
+          
+          if (father_married_to_mother_polygyny[i, a] == 0) father_state[i, a] <- "to mother (m)"
+          if (father_married_to_notmother_monogamy[i, a] == 1) father_state[i, a] <- "to step-mother (m)"
+          if (father_married_to_notmother_polygyny[i, a] == 1) father_state[i, a] <- "to step-mother (p)"
+          if (father_married_to_mother_polygyny[i, a] == 1) father_state[i, a] <- "to mother (p)"
+          
+        }
         
       }
       
@@ -243,11 +359,13 @@ father_state[which(father_state == "to mother (m)")] <- 5
 father_state[which(father_state == "to mother (p)")] <- 6
 father_state[which(father_state == "unknown parent")] <- 7
 father_state[which(father_state == "child cens")] <- 8
-father_state[which(father_state == "parent cens")] <- 8
+father_state[which(father_state == "parent cens")] <- 9
 
 father_state <- matrix(as.numeric(father_state), ncol = 19)
 
 # plot mother status
+
+kids <- sample(1:nrow(ppl), 20)
 
 png("output/figures/mother_status.png", 
     res = 250, 
@@ -256,7 +374,7 @@ png("output/figures/mother_status.png",
 
 par(mfrow = c(1, 1))
 
-state <- mother_state[sample(1:nrow(ppl), 20), ]
+state <- mother_state[kids, ]
 
 cols <- c("navy",
           "goldenrod",
@@ -265,7 +383,7 @@ cols <- c("navy",
           "mediumorchid", 
           "chocolate3",
           "gray", 
-          "gray")
+          "darkgray")
 
 plot(NULL,
      xlab = "", 
@@ -319,7 +437,7 @@ png("output/figures/father_status.png",
 
 par(mfrow = c(1, 1))
 
-state <- father_state[sample(1:nrow(ppl), 20), ]
+state <- father_state[kids, ]
 
 cols <- c("navy", 
           "goldenrod", 
@@ -329,7 +447,7 @@ cols <- c("navy",
           "mediumorchid",
           "chocolate3",
           "gray",
-          "gray")
+          "darkgray")
 
 plot(NULL,
      xlab = "", 
@@ -385,7 +503,7 @@ mother <- data.frame("dead" = apply(mother_state, 2, function(x) length(which(x 
                      "married_to_stepfather" = apply(mother_state, 2, function(x) length(which(x == 4))),
                      "married_to_father" = apply(mother_state, 2, function(x) length(which(x == 3))),
                      "married_to_father_with_cowife" = apply(mother_state, 2, function(x) length(which(x == 5))), 
-                     "missing" = apply(mother_state, 2, function(x) length(which(x == 6| x == 7))))
+                     "missing" = apply(mother_state, 2, function(x) length(which(x == 6| x == 7 | x == 8))))
 
 all(apply(mother, 1, sum) == 3693) 
 
@@ -414,7 +532,7 @@ father <- data.frame("dead" = apply(father_state, 2, function(x) length(which(x 
                      "married_to_stepmother_p" = apply(father_state, 2, function(x) length(which(x == 4))),
                      "married_to_mother_m" = apply(father_state, 2, function(x) length(which(x == 5))), 
                      "married_to_mother_p" = apply(father_state, 2, function(x) length(which(x == 6))), 
-                     "missing" = apply(father_state, 2, function(x) length(which(x == 7 | x == 8))))
+                     "dead/censored/missing" = apply(father_state, 2, function(x) length(which(x == 7 | x == 8 |  x == 9))))
 
 # group ages 1-5, 6-10, 11-15, 16-19
 
@@ -567,3 +685,212 @@ print(xtable(tab),
       file = "output/tables/outcome_age_bins.txt", 
       only.contents = TRUE,
       sanitize.text.function = function(x) {x})
+
+# make figures/tables on the structure of the dataset
+
+# birth-death by birth year
+# only for 18 years of life
+
+d <- ppl[, c("id", "dob", "date_of_death", "date_of_censor")]
+d <- d[order(d$dob), ]
+d$year_at_18 <- d$dob + 18
+d$died_or_censor_before_18 <- ifelse(is.na(d$date_of_death), d$date_of_censor, d$date_of_death)
+d$died_or_censor_before_18 <- d$died_or_censor_before_18 < d$year_at_18
+
+d$date_of_death_or_censor <- ifelse(is.na(d$date_of_death), d$date_of_censor, d$date_of_death)
+
+pdf("output/figures/lifelines.pdf",
+    height = 25,
+    width = 20)
+
+par(mar = c(6, 6, 2, 2))
+
+plot(NULL,
+     xlim = c(1930, 2014), 
+     ylim = c(1, 3693),
+     xlab = "year",
+     ylab = "child",
+     cex.lab = 2.5,
+     cex.axis = 2.5)
+
+for (i in 1:nrow(d)) {
+  
+  arrows(y0 = i,
+         y1 = i, 
+         x0 = d$dob[i], 
+         x1 = ifelse(d$died_or_censor_before_18[i] == TRUE, d$date_of_death_or_censor[i], d$year_at_18[i]),
+         length = 0,
+         col = col.alpha("grey30", 0.4))
+  
+}
+
+abline(v = 1995, col = "red", lwd = 2)
+
+dev.off()
+
+# outcome 1 survival
+
+alive <- matrix(nrow = n, ncol = 19)
+
+for (i in 1:n) {
+  
+  # get child dob, dod, doc
+  dob <- ppl$dob[i]
+  dod <- ppl$date_of_death[i]
+  doc <- ppl$date_of_censor[i]
+  
+  # if dod is known
+  if (!is.na(dod)) {
+    # age at death is yod - yob + 1 # so if it dies in the same year as born = 1
+    aod <- (dod - dob) + 1
+    
+    if (aod > 19) {
+      
+      alive[i, ] <- 1
+      
+    }
+    
+    else {
+      
+      alive[i, 1:aod] <- 1
+      alive[i, aod] <- 0
+      
+      if (aod < 19) {
+        alive[i, (aod+1):19] <- -99 
+      }
+      
+    }
+    
+  }
+  
+  if (!is.na(doc)) {
+    
+    aoc <- (doc - dob) + 1
+    
+    if (aoc > 19) {
+      
+      alive[i, ] <- 1
+      
+    }
+    
+    else {
+      
+      alive[i, 1:aoc] <- 1
+      alive[i, aoc] <- 1
+      
+      if (aoc < 19) {
+        alive[i, (aoc+1):19] <- -99 
+      }
+      
+    }
+    
+  }
+  
+}
+
+alive[alive == -99] <- NA
+
+apply(alive, 2, function(x) sum(x, na.rm = TRUE))
+
+height <- matrix(nrow = n, ncol = 19)
+
+id <- ppl$id
+
+for (i in 1:n) {
+  
+  # get child dob
+  dob <- ppl$dob[i]
+  # subset to obs for that child
+  tmp <- obs[obs$id == id[i], ]
+  # subset to non-NA obs
+  tmp <- tmp[which(!is.na(tmp$height)), ]
+  # fill in the "age from 1:19"
+  tmp$age <- (tmp$year - dob) + 1
+  
+  if (nrow(tmp) > 0) {
+    
+    for (j in 1:nrow(tmp)) {
+      
+      if (tmp$age[j] <= 19) {
+        
+        height[i, tmp$age[j]] <- tmp$height[j]
+        
+      }
+    }
+  }
+}
+
+# how many total height measures?
+sum(apply(height, 2, function(x) length(which(!is.na(x)))))
+
+# how many inds have an edu measurement?
+height_measures <- apply(height, 1, function(x) length(which(!is.na(x))))
+sum(height_measures > 0)
+table(height_measures)
+
+# BMI is the same as height, because we need height to calc BMI
+
+edu <- matrix(nrow = n, ncol = 19)
+
+for (i in 1:n) {
+  
+  dob <- ppl$dob[i]
+  tmp <- obs[obs$id == id[i], ]
+  tmp <- tmp[which(!is.na(tmp$edu)), ]
+  tmp$age <- (tmp$year - dob) + 1
+  
+  if (nrow(tmp) > 0) {
+    
+    for (j in 1:nrow(tmp)) {
+      
+      if (tmp$age[j] <= 19) {
+        
+        edu[i, tmp$age[j]] <- tmp$edu[j]
+        
+      }
+    }
+  }
+}
+
+# how many total measurements?
+
+sum(apply(edu, 2, function(x) length(which(!is.na(x)))))
+
+# how many inds have an edu measurement?
+edu_measures <- apply(edu, 1, function(x) length(which(!is.na(x))))
+sum(edu_measures > 0)
+
+# print summary table
+
+tab <- data.frame(survival = apply(alive, 2, function(x) length(which(!is.na(x)))),
+                  height = apply(height, 2, function(x) length(which(!is.na(x)))),
+                  education = apply(edu, 2, function(x) length(which(!is.na(x)))))
+
+print(xtable(tab), 
+      file = "output/tables/sample_by_age.txt", 
+      only.contents = TRUE, 
+      sanitize.rownames.function = function(x) {x})
+
+# calculate mother/father/male sums for height & edu
+
+ids_with_height <- which(apply(height, 1, function(x) length(which(!is.na(x))) > 0)) 
+
+length(unique(ppl[ppl$id %in% ids_with_height, ]$father_id)) - 1 # 245 fathers
+length(unique(ppl[ppl$id %in% ids_with_height, ]$mother_id)) - 1 # 324 mothers
+
+length(which(is.na(ppl[ppl$id %in% ids_with_height, ]$father_id))) # 140
+length(which(is.na(ppl[ppl$id %in% ids_with_height, ]$mother_id))) # 13
+
+sum(ppl[ppl$id %in% ids_with_height, ]$male) # 412
+sum(!ppl[ppl$id %in% ids_with_height, ]$male) # 469
+
+ids_with_edu <- which(apply(edu, 1, function(x) length(which(!is.na(x))) > 0)) 
+
+length(unique(ppl[ppl$id %in% ids_with_edu, ]$father_id)) - 1 # 314 fathers
+length(unique(ppl[ppl$id %in% ids_with_edu, ]$mother_id)) - 1 # 423 mothers
+
+length(which(is.na(ppl[ppl$id %in% ids_with_edu, ]$father_id))) # 279
+length(which(is.na(ppl[ppl$id %in% ids_with_edu, ]$mother_id))) # 53
+
+sum(ppl[ppl$id %in% ids_with_edu, ]$male) # 667
+sum(!ppl[ppl$id %in% ids_with_edu, ]$male) # 703

@@ -1,5 +1,4 @@
-# script to fit survival models
-library(cmdstanr)
+# fit all mother models
 
 # read processed data objects
 
@@ -89,16 +88,25 @@ birthorder[is.na(birthorder)] <- 16
 
 twin <- ppl$twin
 
-mother_id <- ppl$mother_id
 father_id <- ppl$father_id
+mother_id <- ppl$mother_id
 
-mother_id <- as.integer(as.factor(mother_id))
-I <- length(unique(mother_id)) - 1
-mother_id[is.na(mother_id)] <- -99
+# assign parent ids for all the NA values
+# these are the "external" parents
+# each gets their own unique ID to be conservative
 
 father_id <- as.integer(as.factor(father_id))
-L <- length(unique(father_id)) - 1
-father_id[is.na(father_id)] <- -99
+start_unk_id <- max(father_id, na.rm = TRUE) + 1 # 461 is the max ID, so start from there + 1
+unk_id_n <- length(which(is.na(father_id)))
+father_id[is.na(father_id)] <- start_unk_id:(start_unk_id + unk_id_n - 1)
+
+mother_id <- as.integer(as.factor(mother_id))
+start_unk_id <- max(mother_id, na.rm = TRUE) + 1 # 461 is the max ID, so start from there + 1
+unk_id_n <- length(which(is.na(mother_id)))
+mother_id[is.na(mother_id)] <- start_unk_id:(start_unk_id + unk_id_n - 1)
+
+I <- length(unique(mother_id))
+L <- length(unique(father_id))
 
 data <- list(N = n, 
              A = 19, 
@@ -185,6 +193,22 @@ height[is.na(height)] <- -99
 
 data$alive <- height
 names(data)[names(data) == "alive"] <- "height"
+
+# are any height measures non NA for missing sex kids?
+all(data$height[which(data$male == -99), ] == -99) # all are -99
+
+# revise Y for year-effects estimated
+# earliest year of obs in the data is earliest yob for somebody who could have received a height measure
+# between 1995-2014 and is under 18 during this period
+# i.e., 1976
+years_short <- 1976:2014
+data$Y <- length(years_short)
+
+# also redo dobs so that 1976 is index 1
+data$dob <- ppl$dob
+data$dob <- (data$dob - 1976) + 1
+table(data$dob)
+data$dob[data$dob < 1] <- -99
 
 # compile model
 
@@ -306,9 +330,23 @@ data$weight <- edu
 names(data)[names(data) == "weight"] <- "edu"
 data$height <- NULL
 
+# are any edu measures non NA for missing sex kids?
+all(data$edu[which(data$male == -99), ] == -99) # all are -99
+
+# trim edu data to ages which have data
+data$A <- 15
+data$edu <- data$edu[, 5:19]
+data$mother_dead <- data$mother_dead[, 5:19]
+data$father_dead <- data$father_dead[, 5:19]
+data$mother_unmarried <- data$mother_unmarried[, 5:19]
+data$mother_married_to_notfather <- data$mother_married_to_notfather[, 5:19]
+data$mother_married_to_father_with_cowife <- data$mother_married_to_father_with_cowife[, 5:19]
+data$skip <- data$skip[, 5:19]
+str(data)
+
 # compile model
 
-m <- cmdstan_model("stan/education_mother.stan")
+m <- cmdstan_model("stan/education_hurdle_mother.stan")
 
 # fit model
 

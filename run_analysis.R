@@ -1,11 +1,13 @@
-library(rstan)
-library(cmdstanr)
-library(rethinking)
+library(cowplot)
 library(xtable)
 library(ggplot2)
-library(cowplot)
+library(rethinking)
+library(cmdstanr)
+library(rstan)
 
-# make output folders
+seed <- 1312
+
+# make output folders 
 
 dir.create("stanfits", recursive = TRUE)
 

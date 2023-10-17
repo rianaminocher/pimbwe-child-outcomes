@@ -56,7 +56,6 @@ parameters {
 real alpha;
 real <lower = 0> scale;
 
-real <lower = 0, upper = 1> p_male; // prob missing sex is male
 real miss_birth_order; // missing birthorder param
 
 real <lower = 0> mother_sigma;
@@ -102,7 +101,6 @@ for (i in 1:10) {
 model {
 
 alpha ~ normal(2, 2);
-p_male ~ beta(2, 2);
 
 scale ~ exponential(1);
 
@@ -135,11 +133,6 @@ for (i in 1:10) {
 
 for (n in 1:N) {
 
-  // if sex is not missing
-  if (male[n] != -99) {
-
-  male[n] ~ bernoulli(p_male);
-
       for (a in 1:A) {
 
         if (weight[n, a] != -99) { // if weight is not unknown
@@ -149,7 +142,7 @@ for (n in 1:N) {
                 weight[n, a] ~ gamma(exp(
                   alpha + 
                   a_bo[birthorder[n]] +
-                  a_year[dob[n]] + 
+                  a_year[dob[n] + (a-1)] + 
                   a_mother[mother_id[n]] * mother_sigma +
                   a_father[father_id[n]] * father_sigma +
                   a_age[1, a] + 
@@ -170,7 +163,9 @@ for (n in 1:N) {
             weight[n, a] ~ gamma(exp(
                   alpha + 
                   a_bo[birthorder[n]] +
-                  a_year[dob[n]] + 
+                  a_year[dob[n] + (a-1)] + 
+                  a_mother[mother_id[n]] * mother_sigma +
+                  a_father[father_id[n]] * father_sigma +
                   a_age[1, a] + 
                   a_age[2, a] * male[n] + 
                   a_age[3, a] * twin[n] + 
@@ -181,94 +176,6 @@ for (n in 1:N) {
 
         }
       }
-    } // male known
-
-  // if sex is missing
-  // p(y) = p(x==1)p(y|x==1) + p(x==0)p(y|x==0)
-
-  if (male[n] == -99) {
-
-  real theta_0; // prob given female
-  real theta_1; // prob given male
-
-    for (a in 1:A) {
-
-      if (weight[n, a] != -99) {
-
-        if (skip[n, a] == 0) {
-
-            theta_0 = gamma_lpdf(
-              weight[n, a] |
-              exp(alpha + 
-              a_bo[birthorder[n]] + 
-              a_year[dob[n]] + 
-              a_mother[mother_id[n]] * mother_sigma +
-              a_father[father_id[n]] * father_sigma +
-              a_age[1, a] + 
-              a_age[2, a] * 0 + 
-              a_age[3, a] * twin[n] + 
-              a_age[4, a] * mother_dead[n, a] +
-              a_age[5, a] * father_dead[n, a] +
-              a_age[6, a] * father_unmarried[n, a] +
-              a_age[7, a] * father_married_to_notmother_monogamy[n, a] +
-              a_age[8, a] * father_married_to_notmother_polygyny[n, a] +
-              a_age[9, a] * father_married_to_mother_polygyny[n, a]
-              ) * scale, scale);
-
-             theta_1 = gamma_lpdf(
-               weight[n, a] |
-               exp(alpha + 
-               a_bo[birthorder[n]] + 
-               a_year[dob[n]] + 
-               a_mother[mother_id[n]] * mother_sigma +
-               a_father[father_id[n]] * father_sigma +
-               a_age[1, a] + 
-               a_age[2, a] * 1 + 
-               a_age[3, a] * twin[n] + 
-               a_age[4, a] * mother_dead[n, a] +
-               a_age[5, a] * father_dead[n, a] +
-               a_age[6, a] * father_unmarried[n, a] +
-               a_age[7, a] * father_married_to_notmother_monogamy[n, a] +
-               a_age[8, a] * father_married_to_notmother_polygyny[n, a] +
-               a_age[9, a] * father_married_to_mother_polygyny[n, a]
-               ) * scale, scale);
-
-            target += log_mix(p_male, theta_0, theta_1);
-
-        }
-
-        if (skip[n, a] == 1) {
-
-            theta_0 = gamma_lpdf(
-              weight[n, a] |
-              exp(alpha + 
-              a_bo[birthorder[n]] + 
-              a_year[dob[n]] + 
-              a_age[1, a] + 
-              a_age[2, a] * 0 + 
-              a_age[3, a] * twin[n] + 
-              a_age[10, a]
-              ) * scale, scale);
-
-             theta_1 = gamma_lpdf(
-               weight[n, a] |
-               exp(alpha + 
-               a_bo[birthorder[n]] + 
-               a_year[dob[n]] + 
-               a_age[1, a] + 
-               a_age[2, a] * 1 + 
-               a_age[3, a] * twin[n] + 
-               a_age[10, a]
-               ) * scale, scale);
-
-            target += log_mix(p_male, theta_0, theta_1);
-
-          }
-
-        }
-
-      }
-    }//male unknown
 
   } // n
 
@@ -295,48 +202,48 @@ generated quantities {
 
       m_base[i, a] = exp(alpha +
                          a_bo[1] +
-                         a_year[60] +
+                         a_year[16 + (a-1)] +
                          a_age[1, a] +
                          a_age[2, a] * (i-1));
 
       m_father_dead[i, a] = exp(alpha + 
                                 a_bo[1] + 
-                                a_year[60] +
+                                a_year[16 + (a-1)] +
                                 a_age[1, a] +
                                 a_age[2, a] * (i-1) + // male or female offset (when i == 1, female, when i == 2 is male)
                                 a_age[5, a] * 1);
 
       m_father_unmarried[i, a] = exp(alpha + 
                                      a_bo[1] + 
-                                     a_year[60] +
+                                     a_year[16 + (a-1)] +
                                      a_age[1, a] +
                                      a_age[2, a] * (i-1) +
                                      a_age[6, a] * 1);
 
       m_father_married_to_notmother_monogamy[i, a] = exp(alpha + 
                                                          a_bo[1] + 
-                                                         a_year[60] +
+                                                         a_year[16 + (a-1)] +
                                                          a_age[1, a] +
                                                          a_age[2, a] * (i-1) +
                                                          a_age[7, a] * 1);
 
       m_father_married_to_notmother_polygyny[i, a] = exp(alpha + 
                                                          a_bo[1] + 
-                                                         a_year[60] +
+                                                         a_year[16 + (a-1)] +
                                                          a_age[1, a] +
                                                          a_age[2, a] * (i-1) +
                                                          a_age[8, a] * 1);
 
       m_father_married_to_mother_polygyny[i, a] = exp(alpha + 
                                                       a_bo[1] + 
-                                                      a_year[60] +
+                                                      a_year[16 + (a-1)] +
                                                       a_age[1, a] +
                                                       a_age[2, a] * (i-1) +
                                                       a_age[9, a] * 1);
 
       m_unknown_parent[i, a] = exp(alpha + 
                                    a_bo[1] + 
-                                   a_year[60] +
+                                   a_year[16 + (a-1)] +
                                    a_age[1, a] +
                                    a_age[2, a] * (i-1) +
                                    a_age[10, a]);

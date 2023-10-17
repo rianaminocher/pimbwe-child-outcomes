@@ -1,5 +1,4 @@
-# script to fit all father models
-library(cmdstanr)
+# fit all father models
 
 # read processed data objects
 
@@ -96,13 +95,24 @@ twin <- ppl$twin
 father_id <- ppl$father_id
 mother_id <- ppl$mother_id
 
-mother_id <- as.integer(as.factor(mother_id))
-I <- length(unique(mother_id)) - 1
-mother_id[is.na(mother_id)] <- -99
+# assign parent ids for all the NA values
+# these are the "external" parents
+# each gets their own unique ID to be conservative
 
 father_id <- as.integer(as.factor(father_id))
-L <- length(unique(father_id)) - 1
-father_id[is.na(father_id)] <- -99
+start_unk_id <- max(father_id, na.rm = TRUE) + 1 # 461 is the max ID, so start from there + 1
+unk_id_n <- length(which(is.na(father_id)))
+father_id[is.na(father_id)] <- start_unk_id:(start_unk_id + unk_id_n - 1)
+
+mother_id <- as.integer(as.factor(mother_id))
+start_unk_id <- max(mother_id, na.rm = TRUE) + 1 # 461 is the max ID, so start from there + 1
+unk_id_n <- length(which(is.na(mother_id)))
+mother_id[is.na(mother_id)] <- start_unk_id:(start_unk_id + unk_id_n - 1)
+
+I <- length(unique(mother_id))
+L <- length(unique(father_id))
+
+# a_year for survival will be 86 intercepts
 
 data <- list(N = n, 
              A = 19, 
@@ -200,6 +210,22 @@ sum(data$height[data$father_married_to_notmother_monogamy == 1] != -99)
 sum(data$height[data$father_married_to_notmother_polygyny == 1] != -99)
 sum(data$height[data$father_married_to_mother_polygyny == 1] != -99)
 
+# are any height measures non NA for missing sex kids?
+all(data$height[which(data$male == -99), ] == -99) # all are -99
+
+# revise Y for year-effects estimated
+# earliest year of obs in the data is earliest yob for somebody who could have received a height measure
+# between 1995-2014 and is under 18 during this period
+# i.e., 1976
+years_short <- 1976:2014
+data$Y <- length(years_short)
+
+# also redo dobs so that 1976 is index 1
+data$dob <- ppl$dob
+data$dob <- (data$dob - 1976) + 1
+table(data$dob)
+data$dob[data$dob < 1] <- -99
+
 # compile model
 
 m <- cmdstan_model("stan/height_father.stan")
@@ -271,6 +297,9 @@ data$weight[which(data$weight > 30)] <- NA
 
 data$weight[is.na(data$weight)] <- -99
 
+# are any weight measures non NA for missing sex kids?
+all(data$weight[which(data$male == -99), ] == -99) # all are -99
+
 # compile model
 
 m <- cmdstan_model("stan/weight_father.stan")
@@ -317,10 +346,26 @@ edu[is.na(edu)] <- -99
 
 data$weight <- edu
 names(data)[names(data) == "weight"] <- "edu"
+data$height <- NULL
+
+# are any edu measures non NA for missing sex kids?
+all(data$edu[which(data$male == -99), ] == -99) # all are -99
+
+# trim edu data to ages which have data
+data$A <- 15
+data$edu <- data$edu[, 5:19]
+data$mother_dead <- data$mother_dead[, 5:19]
+data$father_dead <- data$father_dead[, 5:19]
+data$father_unmarried <- data$father_unmarried[, 5:19]
+data$father_married_to_notmother_monogamy <- data$father_married_to_notmother_monogamy[, 5:19]
+data$father_married_to_notmother_polygyny <- data$father_married_to_notmother_polygyny[, 5:19]
+data$father_married_to_mother_polygyny <- data$father_married_to_mother_polygyny[, 5:19]
+data$skip <- data$skip[, 5:19]
+str(data)
 
 # compile model
 
-m <- cmdstan_model("stan/education_father.stan")
+m <- cmdstan_model("stan/education_hurdle_father.stan")
 
 # fit model
 

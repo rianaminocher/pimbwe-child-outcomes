@@ -61,6 +61,7 @@ parameters {
 
 real alpha;
 real <lower = 0, upper = 1> p_male; // prob missing sex is male
+
 real miss_birth_order; // missing birthorder param
 
 real <lower = 0> mother_sigma;
@@ -150,7 +151,7 @@ for (n in 1:N) {
         alive[n, 1] ~ bernoulli_logit(
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] + 
         a_mother[mother_id[n]] * mother_sigma +
         a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
@@ -169,7 +170,9 @@ for (n in 1:N) {
         alive[n, 1] ~ bernoulli_logit(
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] + 
+        a_mother[mother_id[n]] * mother_sigma +
+        a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
         a_age[2, 1] * male[n] + 
         a_age[3, 1] * twin[n] + 
@@ -189,7 +192,7 @@ for (n in 1:N) {
                   alive[n, a] ~ bernoulli_logit(
                   alpha + 
                   a_bo[birthorder[n]] +
-                  a_year[dob[n]] + 
+                  a_year[dob[n] + (a-1)] + 
                   a_mother[mother_id[n]] * mother_sigma +
                   a_father[father_id[n]] * father_sigma +
                   a_age[1, a] + 
@@ -207,7 +210,9 @@ for (n in 1:N) {
               alive[n, a] ~ bernoulli_logit(
               alpha + 
               a_bo[birthorder[n]] + 
-              a_year[dob[n]] + 
+              a_year[dob[n] + (a-1)] + 
+              a_mother[mother_id[n]] * mother_sigma +
+              a_father[father_id[n]] * father_sigma +
               a_age[1, a] + 
               a_age[2, a] * male[n] + 
               a_age[3, a] * twin[n] + 
@@ -237,7 +242,7 @@ for (n in 1:N) {
         alive[n, 1] |
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] + 
         a_mother[mother_id[n]] * mother_sigma +
         a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
@@ -253,7 +258,7 @@ for (n in 1:N) {
         alive[n, 1] |
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] + 
         a_mother[mother_id[n]] * mother_sigma +
         a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
@@ -278,7 +283,9 @@ for (n in 1:N) {
         alive[n, 1] |
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] + 
+        a_mother[mother_id[n]] * mother_sigma +
+        a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
         a_age[2, 1] * 0 + 
         a_age[3, 1] * twin[n] + 
@@ -288,7 +295,9 @@ for (n in 1:N) {
         alive[n, 1] |
         alpha + 
         a_bo[birthorder[n]] + 
-        a_year[dob[n]] + 
+        a_year[dob[n] + 0] +
+        a_mother[mother_id[n]] * mother_sigma +
+        a_father[father_id[n]] * father_sigma +
         a_age[1, 1] + 
         a_age[2, 1] * 1 + 
         a_age[3, 1] * twin[n] + 
@@ -314,7 +323,7 @@ for (n in 1:N) {
               alive[n, a] |
               alpha + 
               a_bo[birthorder[n]] + 
-              a_year[dob[n]] + 
+              a_year[dob[n] + (a-1)] + 
               a_mother[mother_id[n]] * mother_sigma +
               a_father[father_id[n]] * father_sigma +
               a_age[1, a] + 
@@ -330,7 +339,7 @@ for (n in 1:N) {
                alive[n, a] |
                alpha + 
                a_bo[birthorder[n]] + 
-               a_year[dob[n]] + 
+               a_year[dob[n] + (a-1)] + 
                a_mother[mother_id[n]] * mother_sigma +
                a_father[father_id[n]] * father_sigma +
                a_age[1, a] + 
@@ -355,7 +364,9 @@ for (n in 1:N) {
               alive[n, a] |
               alpha + 
               a_bo[birthorder[n]] + 
-              a_year[dob[n]] + 
+              a_year[dob[n] + (a-1)] + 
+              a_mother[mother_id[n]] * mother_sigma +
+              a_father[father_id[n]] * father_sigma +
               a_age[1, a] + 
               a_age[2, a] * 0 + 
               a_age[3, a] * twin[n] + 
@@ -365,7 +376,9 @@ for (n in 1:N) {
                alive[n, a] |
                alpha + 
                a_bo[birthorder[n]] + 
-               a_year[dob[n]] + 
+               a_year[dob[n] + (a-1)] + 
+               a_mother[mother_id[n]] * mother_sigma +
+               a_father[father_id[n]] * father_sigma +
                a_age[1, a] + 
                a_age[2, a] * 1 + 
                a_age[3, a] * twin[n] + 
@@ -411,41 +424,41 @@ generated quantities {
 
       p_base[i, a] = inv_logit(alpha +
                                a_bo[1] +
-                               a_year[60] +
+                               a_year[60 + (a-1)] +
                                a_age[1, a] +
                                a_age[2, a] * (i-1));
 
       p_mother_dead[i, a] = inv_logit(alpha + 
                                       a_bo[1] + 
-                                      a_year[60] +
+                                      a_year[60 + (a-1)] +
                                       a_age[1, a] +
                                       a_age[2, a] * (i-1) + // male or female offset (when i == 1, female, when i == 2 is male)
                                       a_age[5, a] * 1);
 
       p_mother_unmarried[i, a] = inv_logit(alpha + 
                                            a_bo[1] + 
-                                           a_year[60] +
+                                           a_year[60 + (a-1)] +
                                            a_age[1, a] +
                                            a_age[2, a] * (i-1) +
                                            a_age[6, a] * 1);
 
       p_mother_married_to_notfather[i, a] = inv_logit(alpha + 
                                                       a_bo[1] + 
-                                                      a_year[60] +
+                                                      a_year[60 + (a-1)] +
                                                       a_age[1, a] +
                                                       a_age[2, a] * (i-1) +
                                                       a_age[7, a] * 1);
 
       p_mother_married_to_father_with_cowife[i, a] = inv_logit(alpha + 
                                                                a_bo[1] + 
-                                                               a_year[60] +
+                                                               a_year[60 + (a-1)] +
                                                                a_age[1, a] +
                                                                a_age[2, a] * (i-1) +
                                                                a_age[8, a] * 1);
 
       p_unknown_parent[i, a] = inv_logit(alpha + 
                                          a_bo[1] + 
-                                         a_year[60] +
+                                         a_year[60 + (a-1)] +
                                          a_age[1, a] +
                                          a_age[2, a] * (i-1) + 
                                          a_age[9, a]);

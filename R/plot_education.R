@@ -1,49 +1,53 @@
-library(rethinking)
-library(ggplot2)
-library(cowplot)
-library(xtable)
+# plot full results for education models
 
-# plot full results for child height models
-
-fit <- readRDS("stanfits/father_education.rds")
+fit <- readRDS("stanfits/mother_education.rds")
 
 # check fit
 
-png("output/trace/father_education.png", 
+png("output/trace/mother_education.png", 
     res = 250, 
     height = 3000, 
     width = 3000)
 
-print(traceplot(fit, pars = c("alpha",  
-                              "a_bo_tau", 
-                              "a_bo_kappa",
-                              "a_bo_delta",
-                              "a_year_tau", 
-                              "a_year_kappa",
-                              "a_year_delta",
-                              "a_age_tau",
-                              "a_age_delta",
-                              "a_age_kappa",
-                              "father_sigma",
-                              "mother_sigma",
-                              "sum_parent_sigma")))
+print(traceplot(fit, pars = c("alpha_l",
+                              "a_bo_tau_l", 
+                              "a_bo_kappa_l",
+                              "a_bo_delta_l",
+                              "a_year_tau_l", 
+                              "a_year_kappa_l",
+                              "a_year_delta_l",
+                              "a_age_tau_l",
+                              "a_age_delta_l",
+                              "a_age_kappa_l",
+                              "alpha_t",
+                              "a_bo_tau_t", 
+                              "a_bo_kappa_t",
+                              "a_bo_delta_t",
+                              "a_year_tau_t", 
+                              "a_year_kappa_t",
+                              "a_year_delta_t",
+                              "a_age_tau_t",
+                              "a_age_delta_t",
+                              "a_age_kappa_t",
+                              "father_sigma_t",
+                              "mother_sigma_t",
+                              "father_sigma_l",
+                              "mother_sigma_l")))
+
 dev.off()
 
-# print summary table
-
-tab <- precis(fit, 3, pars = c("alpha",  
-                               "a_bo_tau", 
-                               "a_bo_kappa",
-                               "a_bo_delta",
-                               "a_year_tau", 
-                               "a_year_kappa",
-                               "a_year_delta",
-                               "a_age_tau",
-                               "a_age_delta",
-                               "a_age_kappa",
-                               "mother_sigma",
-                               "father_sigma",
-                               "sum_parent_sigma"))
+tab <- precis(fit, 3, pars = c("alpha_l",
+                               "a_bo_tau_l", 
+                               "a_bo_kappa_l",
+                               "a_bo_delta_l",
+                               "a_year_tau_l", 
+                               "a_year_kappa_l",
+                               "a_year_delta_l",
+                               "a_age_tau_l",
+                               "a_age_delta_l",
+                               "a_age_kappa_l",
+                               "father_sigma_l",
+                               "mother_sigma_l"))
 
 rownames(tab) <- c("$\\alpha$",
                    "$\\gamma_{\\tau}$", 
@@ -61,7 +65,6 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_7}$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
-                   "$\\beta_{\\tau_{10}}$",
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -71,7 +74,6 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_7}$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
-                   "$\\beta_{\\kappa_{10}}$",
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -81,13 +83,66 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_7}$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
-                   "$\\beta_{\\delta_{10}}$",
                    "$\\kappa_{\\sigma}$", 
-                   "$\\eta_{\\sigma}$", 
-                   "$\\pi_{\\sigma}$")
+                   "$\\eta_{\\sigma}$")
 
 print(xtable(tab), 
-      file = "output/tables/summary_father_education.txt", 
+      file = "output/tables/summary_mother_education_1.txt", 
+      only.contents = TRUE, 
+      sanitize.rownames.function = function(x) {x})
+
+tab <- precis(fit, 3, pars = c("alpha_t",
+                               "a_bo_tau_t", 
+                               "a_bo_kappa_t",
+                               "a_bo_delta_t",
+                               "a_year_tau_t", 
+                               "a_year_kappa_t",
+                               "a_year_delta_t",
+                               "a_age_tau_t",
+                               "a_age_delta_t",
+                               "a_age_kappa_t",
+                               "father_sigma_t",
+                               "mother_sigma_t"))
+
+rownames(tab) <- c("$\\alpha$",
+                   "$\\gamma_{\\tau}$", 
+                   "$\\gamma_{\\kappa}$",
+                   "$\\gamma_{\\delta}$",
+                   "$\\epsilon_{\\tau}$",
+                   "$\\epsilon_{\\kappa}$",
+                   "$\\epsilon_{\\delta}$",
+                   "$\\beta_{\\tau_1}$",
+                   "$\\beta_{\\tau_2}$",
+                   "$\\beta_{\\tau_3}$",
+                   "$\\beta_{\\tau_4}$",
+                   "$\\beta_{\\tau_5}$",
+                   "$\\beta_{\\tau_6}$",
+                   "$\\beta_{\\tau_7}$",
+                   "$\\beta_{\\tau_8}$",
+                   "$\\beta_{\\tau_9}$",
+                   "$\\beta_{\\kappa_1}$",
+                   "$\\beta_{\\kappa_2}$",
+                   "$\\beta_{\\kappa_3}$",
+                   "$\\beta_{\\kappa_4}$",
+                   "$\\beta_{\\kappa_5}$",
+                   "$\\beta_{\\kappa_6}$",
+                   "$\\beta_{\\kappa_7}$",
+                   "$\\beta_{\\kappa_8}$",
+                   "$\\beta_{\\kappa_9}$",
+                   "$\\beta_{\\delta_1}$",
+                   "$\\beta_{\\delta_2}$",
+                   "$\\beta_{\\delta_3}$",
+                   "$\\beta_{\\delta_4}$",
+                   "$\\beta_{\\delta_5}$",
+                   "$\\beta_{\\delta_6}$",
+                   "$\\beta_{\\delta_7}$",
+                   "$\\beta_{\\delta_8}$",
+                   "$\\beta_{\\delta_9}$",
+                   "$\\kappa_{\\sigma}$",
+                   "$\\eta_{\\sigma}$")
+
+print(xtable(tab), 
+      file = "output/tables/summary_mother_education_2.txt", 
       only.contents = TRUE, 
       sanitize.rownames.function = function(x) {x})
 
@@ -181,24 +236,35 @@ raw_edu <- rbind(edu_girls, edu_boys)
 
 post <- extract.samples(fit)
 
-# check father sigma
+# plot parent random effects
 
-png("output/figures/education_father_random_effects.png", 
+png("output/figures/education_mother_random_effects.png", 
     res = 250,
-    height = 1000,
+    height = 2000,
     width = 2800)
 
-par(mfrow = c(1, 3))
+par(mfrow = c(2, 3))
 
-plot(apply(post$a_father, 2, mean), 
+plot(apply(post$a_father_t, 2, mean), 
      ylab = "father random effects",
      xlab = "")
 
-plot(apply(post$a_mother, 2, mean), 
+plot(apply(post$a_mother_t, 2, mean), 
      ylab = "mother random effects",
      xlab = "")
 
-dens(post$father_sigma + post$mother_sigma, 
+dens(post$father_sigma_t + post$mother_sigma_t, 
+     xlab = "sum of variance on mother/father random effects")
+
+plot(apply(post$a_father_l, 2, mean), 
+     ylab = "father random effects",
+     xlab = "")
+
+plot(apply(post$a_mother_l, 2, mean), 
+     ylab = "mother random effects",
+     xlab = "")
+
+dens(post$father_sigma_l + post$mother_sigma_l, 
      xlab = "sum of variance on mother/father random effects")
 
 dev.off()
@@ -211,9 +277,9 @@ sex <- c("girls", "boys")
 
 for (s in 1:2) {
   
-  p <- post$m_base[ , s, ]
+  p <- post$m_base_l[ , s, ]
   
-  plot_data[[s]] <- data.frame(age = 1:19, 
+  plot_data[[s]] <- data.frame(age = 4+(1:15), 
                                sex = sex[s],
                                offset = apply(p, 2, mean), 
                                upp = apply(p, 2, function(x) HPDI(x, prob = 0.9))[1, ], 
@@ -226,13 +292,13 @@ plot_data <- do.call(rbind, plot_data)
 
 a <-
   
-ggplot() +
+  ggplot() +
   
   labs(y = "education (years)", 
        x = "child age") +
   
   theme_linedraw() +
-
+  
   geom_line(data = plot_data,
             aes(x = age,
                 y = offset,
@@ -252,15 +318,17 @@ ggplot() +
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(1, "cm"), 
         legend.position = c(0.2, 0.8),
         legend.background = element_rect(linetype = "solid", 
                                          color = "black"),
         legend.text = element_text(size = 10), 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) +
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   scale_color_manual(values = c("girls" = "goldenrod", 
                                 "boys" = "navy")) +
@@ -268,7 +336,7 @@ ggplot() +
   scale_fill_manual(values = c("girls" = "goldenrod", 
                                "boys" = "navy")) + 
   
-  ggtitle("A. Predicted education (in years), across childhood") +
+  ggtitle("A. Childhood education (years)") +
   
   geom_point(data = raw_edu, 
              aes(x = age,
@@ -288,9 +356,9 @@ plot_data <- list()
 
 for (i in 1:3) {
  
-  p <- post$a_age[, i, ]
+  p <- post$a_age_l[, i, ]
   
-  plot_data[[i]] <- data.frame(age = 1:19, 
+  plot_data[[i]] <- data.frame(age = 1:15, 
                                cat = par_names[i], 
                                mean = apply(p, 2, mean), 
                                upp = apply(p, 2, function(x) HPDI(x, 0.9))[1, ],
@@ -321,19 +389,21 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  ggtitle("B. Age-specific effects")
+  ggtitle("Age-specific effects")
 
 # plot birth-order parameters
 
-p <- post$a_bo
+p <- post$a_bo_l
 
 plot_data <- data.frame(bo = 1:15, 
                         cat = "birth-order", 
@@ -360,22 +430,24 @@ c <-
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  ggtitle("C. Birth-order effects")
+  ggtitle("Birth-order effects")
 
 # plot birth-year parameters
 
-p <- post$a_year
+p <- post$a_year_l
 
-plot_data <- data.frame(year = 1930:2015, 
-                        cat = "birth-year", 
+plot_data <- data.frame(year = 1976:2014, 
+                        cat = "year", 
                         mean = apply(p, 2, mean), 
                         upp = apply(p, 2, function(x) HPDI(x, 0.9))[1, ],
                         low = apply(p, 2, function(x) HPDI(x, 0.9))[2, ])
@@ -394,51 +466,47 @@ d <-
   
   ylab("estimate") +
   
-  xlab("birth-year") +
+  xlab("year of measurement") +
   
   geom_hline(yintercept = 0, col = col.alpha("indianred", 0.6), size = 1) +
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
-        plot.title = element_text(size = 13, face = "italic")) + 
+        plot.title = element_text(size = 13, face = "italic"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) + 
   
-  geom_rect(aes(xmin = 1930,
-                xmax = 1975,
-                ymin = -5.0,
-                ymax = 2.5),
-            fill = col.alpha("grey", 0.006)) +
-  
-  ggtitle("D. Birth-year effects")
+  ggtitle("Year-specific effects")
 
 # plot deviations from base-case on prediction scale
 
-post_list <- list(post$m_father_dead,
-                  post$m_father_unmarried,
-                  post$m_father_married_to_notmother_monogamy,
-                  post$m_father_married_to_notmother_polygyny,
-                  post$m_father_married_to_mother_polygyny)
+post_list <- list(post$m_unknown_parent_l,
+                  post$m_mother_dead_l,
+                  post$m_mother_unmarried_l,
+                  post$m_mother_married_to_notfather_l,
+                  post$m_mother_married_to_father_with_cowife_l)
 
-type <- c("father dead", 
-          "father unmarried",
-          "father married \nto step-mother (monogamy)",
-          "father married \nto step-mother (polygyny)",
-          "father married \nto mother (polygyny)")
+type <- c("either parent external", 
+          "mother deceased",
+          "mother unmarried",
+          "mother married to \nstep-father",
+          "mother married to  \nbio-father (with co-wife)")
 
 plot_data <- list()
 
 for (z in 1:5) {
   
-  p <- post_list[[z]] - post$m_base
+  p <- post_list[[z]] - post$m_base_l
   # plot for boys
   p <- p[ , 2, ]
   
-  plot_data[[z]] <- data.frame(age = 1:19, 
+  plot_data[[z]] <- data.frame(age = 1:15, 
                                offset = apply(p, 2, mean), 
                                upp = apply(p, 2, function(x) HPDI(x, 0.9))[1, ], 
                                low = apply(p, 2, function(x) HPDI(x, 0.9))[2, ],
@@ -448,11 +516,12 @@ for (z in 1:5) {
 
 plot_data <- do.call(rbind, plot_data)
 
-plot_data$type <- factor(plot_data$type, levels = c("father dead",
-                                                    "father unmarried",
-                                                    "father married \nto step-mother (monogamy)", 
-                                                    "father married \nto step-mother (polygyny)",
-                                                    "father married \nto mother (polygyny)"))
+plot_data$type <- factor(plot_data$type, levels = c("either parent external", 
+                                                    "mother deceased",
+                                                    "mother unmarried",
+                                                    "mother married to \nstep-father",
+                                                    "mother married to  \nbio-father (with co-wife)"))
+
 e <- 
   
 ggplot(plot_data, 
@@ -464,6 +533,8 @@ ggplot(plot_data,
   
   theme_linedraw() +
   
+  ylim(-2, 2) +
+  
   geom_pointrange(size = 0.6) +
   
   facet_grid(. ~ type) +
@@ -473,71 +544,88 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10), 
         strip.text.y = element_text(size = 10, angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 13, face = "italic"),
-        plot.margin = unit(c(5.5, 0, 5.5, 0), "points")) +
+        plot.margin = unit(c(5.5, 0, 5.5, 0), "points"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   geom_hline(yintercept = 0, size = 1.1, color = col.alpha("firebrick", 0.5)) +
   
-  scale_color_manual(values = c("father dead" = "navy",
-                                "father unmarried" = "goldenrod",
-                                "father married \nto step-mother (monogamy)" = "cyan4",
-                                "father married \nto step-mother (polygyny)" = "sienna4",
-                                "father married \nto mother (polygyny)" = "purple4")) +
+  scale_color_manual(values = c("either parent external" = "chocolate3",
+                                "mother deceased" = "navy",
+                                "mother unmarried" = "goldenrod",
+                                "mother married to \nstep-father" = "cyan4",
+                                "mother married to  \nbio-father (with co-wife)" = "purple4")) +
   
-  ggtitle("E. Age-specific contrasts to children of different father-states")
+  ggtitle("B. Age-specific contrasts to children of different mother-states")
 
 # produce estimates reported in text
 
-mean(post$m_base[, 1, 19] - post$m_father_unmarried[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_father_unmarried[, 1, 19], 0.9)
+mean(post$m_mother_married_to_notfather_l[, 1, 15])
+HPDI(post$m_mother_married_to_notfather_l[, 1, 15], 0.9)
 
-# mother model
+mean(post$m_base_l[, 1, 15])
+mean(post$m_mother_married_to_notfather_l[, 1, 15])
+mean(post$m_mother_unmarried_l[, 1, 15])
+mean(post$m_mother_dead_l[, 1, 15])
+mean(post$m_mother_married_to_father_with_cowife_l[, 1, 15])
 
-fit <- readRDS("stanfits/mother_education.rds")
+# father model
+
+fit <- readRDS("stanfits/father_education.rds")
 
 # check fit
 
-png("output/trace/mother_education.png", 
+png("output/trace/father_education.png", 
     res = 250, 
     height = 3000, 
     width = 3000)
 
-print(traceplot(fit, pars = c("alpha",  
-                              "a_bo_tau", 
-                              "a_bo_kappa",
-                              "a_bo_delta",
-                              "a_year_tau", 
-                              "a_year_kappa",
-                              "a_year_delta",
-                              "a_age_tau",
-                              "a_age_delta",
-                              "a_age_kappa",
-                              "father_sigma",
-                              "mother_sigma",
-                              "sum_parent_sigma")))
+print(traceplot(fit, pars = c("a_bo_tau_l", 
+                              "a_bo_kappa_l",
+                              "a_bo_delta_l",
+                              "a_year_tau_l", 
+                              "a_year_kappa_l",
+                              "a_year_delta_l",
+                              "a_age_tau_l",
+                              "a_age_delta_l",
+                              "a_age_kappa_l",
+                              "a_bo_tau_t", 
+                              "a_bo_kappa_t",
+                              "a_bo_delta_t",
+                              "a_year_tau_t", 
+                              "a_year_kappa_t",
+                              "a_year_delta_t",
+                              "a_age_tau_t",
+                              "a_age_delta_t",
+                              "a_age_kappa_t",
+                              "father_sigma_t",
+                              "mother_sigma_t",
+                              "father_sigma_l",
+                              "mother_sigma_l")))
+
 dev.off()
 
 # print summary table
 
-tab <- precis(fit, 3, pars = c("alpha",  
-                               "a_bo_tau", 
-                               "a_bo_kappa",
-                               "a_bo_delta",
-                               "a_year_tau", 
-                               "a_year_kappa",
-                               "a_year_delta",
-                               "a_age_tau",
-                               "a_age_delta",
-                               "a_age_kappa",
-                               "father_sigma",
-                               "mother_sigma",
-                               "sum_parent_sigma"))
+tab <- precis(fit, 3, pars = c("alpha_l",
+                               "a_bo_tau_l", 
+                               "a_bo_kappa_l",
+                               "a_bo_delta_l",
+                               "a_year_tau_l", 
+                               "a_year_kappa_l",
+                               "a_year_delta_l",
+                               "a_age_tau_l",
+                               "a_age_delta_l",
+                               "a_age_kappa_l",
+                               "father_sigma_l",
+                               "mother_sigma_l"))
 
 rownames(tab) <- c("$\\alpha$",
                    "$\\gamma_{\\tau}$", 
@@ -555,6 +643,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_7}$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
+                   "$\\beta_{\\tau_10}$",
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -564,6 +653,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_7}$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
+                   "$\\beta_{\\kappa_10}$",
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -573,12 +663,70 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_7}$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
+                   "$\\beta_{\\delta_10}$",
                    "$\\kappa_{\\sigma}$", 
-                   "$\\eta_{\\sigma}$", 
-                   "$\\pi_{\\sigma}$")
+                   "$\\eta_{\\sigma}$")
 
 print(xtable(tab), 
-      file = "output/tables/summary_mother_education.txt", 
+      file = "output/tables/summary_father_education_1.txt", 
+      only.contents = TRUE, 
+      sanitize.rownames.function = function(x) {x})
+
+tab <- precis(fit, 3, pars = c("alpha_t",
+                               "a_bo_tau_t", 
+                               "a_bo_kappa_t",
+                               "a_bo_delta_t",
+                               "a_year_tau_t", 
+                               "a_year_kappa_t",
+                               "a_year_delta_t",
+                               "a_age_tau_t",
+                               "a_age_delta_t",
+                               "a_age_kappa_t",
+                               "father_sigma_t",
+                               "mother_sigma_t"))
+
+rownames(tab) <- c("$\\alpha$",
+                   "$\\gamma_{\\tau}$", 
+                   "$\\gamma_{\\kappa}$",
+                   "$\\gamma_{\\delta}$",
+                   "$\\epsilon_{\\tau}$",
+                   "$\\epsilon_{\\kappa}$",
+                   "$\\epsilon_{\\delta}$",
+                   "$\\beta_{\\tau_1}$",
+                   "$\\beta_{\\tau_2}$",
+                   "$\\beta_{\\tau_3}$",
+                   "$\\beta_{\\tau_4}$",
+                   "$\\beta_{\\tau_5}$",
+                   "$\\beta_{\\tau_6}$",
+                   "$\\beta_{\\tau_7}$",
+                   "$\\beta_{\\tau_8}$",
+                   "$\\beta_{\\tau_9}$",
+                   "$\\beta_{\\tau_10}$",
+                   "$\\beta_{\\kappa_1}$",
+                   "$\\beta_{\\kappa_2}$",
+                   "$\\beta_{\\kappa_3}$",
+                   "$\\beta_{\\kappa_4}$",
+                   "$\\beta_{\\kappa_5}$",
+                   "$\\beta_{\\kappa_6}$",
+                   "$\\beta_{\\kappa_7}$",
+                   "$\\beta_{\\kappa_8}$",
+                   "$\\beta_{\\kappa_9}$",
+                   "$\\beta_{\\kappa_10}$",
+                   "$\\beta_{\\delta_1}$",
+                   "$\\beta_{\\delta_2}$",
+                   "$\\beta_{\\delta_3}$",
+                   "$\\beta_{\\delta_4}$",
+                   "$\\beta_{\\delta_5}$",
+                   "$\\beta_{\\delta_6}$",
+                   "$\\beta_{\\delta_7}$",
+                   "$\\beta_{\\delta_8}$",
+                   "$\\beta_{\\delta_9}$",
+                   "$\\beta_{\\delta_10}$",
+                   "$\\kappa_{\\sigma}$",
+                   "$\\eta_{\\sigma}$")
+
+print(xtable(tab), 
+      file = "output/tables/summary_father_education_2.txt", 
       only.contents = TRUE, 
       sanitize.rownames.function = function(x) {x})
 
@@ -588,49 +736,60 @@ post <- extract.samples(fit)
 
 # check father sigma
 
-png("output/figures/education_mother_random_effects.png", 
+png("output/figures/education_father_random_effects.png", 
     res = 250,
-    height = 1000,
+    height = 2000,
     width = 2800)
 
-par(mfrow = c(1, 3))
+par(mfrow = c(2, 3))
 
-plot(apply(post$a_father, 2, mean), 
+plot(apply(post$a_father_l, 2, mean), 
      ylab = "father random effects",
      xlab = "")
 
-plot(apply(post$a_mother, 2, mean), 
+plot(apply(post$a_mother_l, 2, mean), 
      ylab = "mother random effects",
      xlab = "")
 
-dens(post$father_sigma + post$mother_sigma, 
+dens(post$father_sigma_l + post$mother_sigma_l, 
+     xlab = "sum of variance on mother/father random effects")
+
+plot(apply(post$a_father_t, 2, mean), 
+     ylab = "father random effects",
+     xlab = "")
+
+plot(apply(post$a_mother_t, 2, mean), 
+     ylab = "mother random effects",
+     xlab = "")
+
+dens(post$father_sigma_t + post$mother_sigma_t, 
      xlab = "sum of variance on mother/father random effects")
 
 dev.off()
 
 # plot deviations from base-case on prediction scale
 
-post_list <- list(post$m_mother_dead,
-                  post$m_mother_unmarried,
-                  post$m_mother_married_to_notfather,
-                  post$m_mother_married_to_father_with_cowife,
-                  post$m_unknown_parent)
+post_list <- list(post$m_father_dead_l,
+                  post$m_father_unmarried_l,
+                  post$m_father_married_to_notmother_monogamy_l,
+                  post$m_father_married_to_notmother_polygyny_l,
+                  post$m_father_married_to_mother_polygyny_l)
 
-type <- c("mother dead", 
-          "mother unmarried",
-          "mother married \nto step-father",
-          "mother married \nto father (with co-wife)",
-          "mother or father unknown")
+type <- c("father deceased", 
+          "father unmarried",
+          "father married to one \nstep-mother",
+          "father polygynously married \n(w/o bio-mother)",
+          "father polygynously married \n(with bio-mother)")
 
 plot_data <- list()
 
 for (z in 1:5) {
   
-  p <- post_list[[z]] - post$m_base
+  p <- post_list[[z]] - post$m_base_l
   # plot for boys
   p <- p[ , 2, ]
   
-  plot_data[[z]] <- data.frame(age = 1:19, 
+  plot_data[[z]] <- data.frame(age = 1:15, 
                                offset = apply(p, 2, mean), 
                                upp = apply(p, 2, function(x) HPDI(x, 0.9))[1, ], 
                                low = apply(p, 2, function(x) HPDI(x, 0.9))[2, ],
@@ -640,11 +799,13 @@ for (z in 1:5) {
 
 plot_data <- do.call(rbind, plot_data)
 
-plot_data$type <- factor(plot_data$type, levels = c("mother dead", 
-                                                    "mother unmarried",
-                                                    "mother married \nto step-father",
-                                                    "mother married \nto father (with co-wife)",
-                                                    "mother or father unknown"))
+plot_data$age <- plot_data$age + 4
+
+plot_data$type <- factor(plot_data$type, levels = c("father deceased", 
+                                                    "father unmarried",
+                                                    "father married to one \nstep-mother",
+                                                    "father polygynously married \n(w/o bio-mother)",
+                                                    "father polygynously married \n(with bio-mother)"))
 f <-
 
 ggplot(plot_data, 
@@ -656,6 +817,8 @@ ggplot(plot_data,
   
   theme_linedraw() +
   
+  ylim(-2, 2) +
+  
   geom_pointrange(size = 0.6) +
   
   facet_grid(. ~ type) +
@@ -665,35 +828,26 @@ ggplot(plot_data,
   
   theme(strip.text.x = element_text(size = 10), 
         strip.text.y = element_text(size = 10, angle = 0), 
-        axis.text = element_text(size = 10), 
-        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10.5), 
+        axis.title = element_text(size = 10.5),
         legend.key.size = unit(0.5, "cm"), 
         legend.text = element_text(size = 10), 
         legend.position = "none", 
         legend.title = element_blank(), 
         plot.title = element_text(size = 13, face = "italic"), 
-        plot.margin = unit(c(5.5, 0, 5.5, 0), "points")) +
+        plot.margin = unit(c(5.5, 0, 5.5, 0), "points"),
+        panel.grid.major = element_line(colour = "grey70", size = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
   
   geom_hline(yintercept = 0, size = 1.1, color = col.alpha("firebrick", 0.5)) +
   
-  scale_color_manual(values = c("mother dead" = "navy",
-                                "mother unmarried" = "goldenrod",
-                                "mother married \nto step-father" = "cyan4",
-                                "mother married \nto father (with co-wife)" = "purple4",
-                                "mother or father unknown" = "chocolate3")) +
+  scale_color_manual(values = c("father deceased" = "navy",
+                                "father unmarried" = "goldenrod",
+                                "father married to one \nstep-mother" = "cyan4",
+                                "father polygynously married \n(w/o bio-mother)" = "sienna4",
+                                "father polygynously married \n(with bio-mother)" = "purple4")) +
 
-  ggtitle("F. Age-specific contrasts to children of different mother-states")
-
-# produce estimates reported in text
-
-mean(post$m_mother_married_to_notfather[, 1, 19])
-HPDI(post$m_mother_married_to_notfather[, 1, 19], 0.9)
-
-mean(post$m_base[, 1, 19] - post$m_mother_married_to_notfather[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_mother_married_to_notfather[, 1, 19], 0.9)
-
-mean(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_unknown_parent[, 1, 19], 0.9)
+  ggtitle("C. Age-specific contrasts to children of different father-states")
 
 # plot them all
 
@@ -721,5 +875,41 @@ png("output/figures/education.png",
     width = 3000)
 
 print(tmp4)
+
+dev.off()
+
+tmp <- plot_grid(e,
+                 f, 
+                 nrow = 2)
+
+tmp2 <- plot_grid(a, 
+                  tmp,
+                  rel_widths = c(1.5, 3, 3))
+
+pdf("output/figures/education.pdf",
+    height = 5.5, 
+    width = 14.6)
+
+print(tmp2)
+
+dev.off()
+
+pdf("output/figures/edu_age_effects.pdf",
+    height = 3.5, 
+    width = 10)
+
+print(b)
+
+dev.off()
+
+tmp <- plot_grid(c,
+                 d, 
+                 rel_widths = c(1.5, 2.5))
+
+pdf("output/figures/edu_birth_effects.pdf",
+    height = 3.5, 
+    width = 10.5)
+
+print(tmp)
 
 dev.off()
