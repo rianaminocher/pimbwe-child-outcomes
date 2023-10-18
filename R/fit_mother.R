@@ -147,15 +147,18 @@ data$skip <- skip
 
 # compile model
 
-m <- cmdstan_model("stan/survival_mother.stan")
+m <- cmdstan_model("stan/survival_mother_twin.stan")
 
 # fit model
 
 fit <- m$sample(data = data, 
-                chains = 4, 
-                parallel_chains = 4, 
+                chains = 1, 
+                refresh=1,
+                iter_warmup=1000,
+                iter_sampling=1000,
+                parallel_chains = 1, 
                 adapt_delta = 0.95,
-                max_treedepth = 13,
+                max_treedepth = 12,
                 init = 0)
 
 # save fit
