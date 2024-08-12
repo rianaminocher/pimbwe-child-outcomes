@@ -1,6 +1,20 @@
-# plot full results for BMI models
+# plot full results for weight-for-height models
+
+# read fit
 
 fit <- readRDS("stanfits/mother_weight.rds")
+
+# extract samples
+
+posterior_samples <- fit$draws()
+mcmc_samples <- as_draws_df(posterior_samples)
+
+# check fit
+# plot trace of all main parameters
+
+parameter_names <- names(mcmc_samples)
+pattern <- "alpha|a_bo_tau|a_bo_kappa|a_bo_delta|a_year_tau|a_year_kappa|a_year_delta|a_age_tau\\[|a_age_delta\\[|a_age_kappa\\[|mother_sigma|father_sigma"
+matching_parameters <- grep(pattern, parameter_names, value = TRUE)
 
 # check fit
 
@@ -9,19 +23,8 @@ png("output/trace/mother_weight.png",
     height = 3000, 
     width = 3000)
 
-print(traceplot(fit, pars = c("alpha",  
-                              "a_bo_tau", 
-                              "a_bo_kappa",
-                              "a_bo_delta",
-                              "a_year_tau", 
-                              "a_year_kappa",
-                              "a_year_delta",
-                              "a_age_tau",
-                              "a_age_delta",
-                              "a_age_kappa", 
-                              "mother_sigma",
-                              "father_sigma",
-                              "sum_parent_sigma")))
+print(bayesplot::mcmc_trace(mcmc_samples, pars = matching_parameters))
+
 dev.off()
 
 # print summary table
@@ -56,6 +59,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_7}$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
+                   "$\\beta_{\\tau_10}$",                  
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -65,6 +69,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_7}$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
+                   "$\\beta_{\\kappa_10}$",                   
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -74,6 +79,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_7}$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
+                   "$\\beta_{\\delta_10}$",
                    "$\\kappa_{\\sigma}$", 
                    "$\\eta_{\\sigma}$", 
                    "$\\pi_{\\sigma}$")
@@ -146,52 +152,7 @@ for (i in 1:n) {
 
 data$skip <- skip
 
-height <- matrix(nrow = n, ncol = 19)
-
 id <- ppl$id
-
-for (i in 1:n) {
-  
-  dob <- ppl$dob[i]
-  tmp <- obs[obs$id == id[i], ]
-  tmp <- tmp[which(!is.na(tmp$height)), ]
-  tmp$age <- (tmp$year - dob) + 1
-  
-  if (nrow(tmp) > 0) {
-    
-    for (j in 1:nrow(tmp)) {
-      
-      if (tmp$age[j] <= 19) {
-        
-        height[i, tmp$age[j]] <- tmp$height[j]
-        
-      }
-    }
-  }
-}
-
-data$height <- height
-
-# turn skips to NA's because we don't model them
-# data$height[data$skip == 1] <- NA
-
-data$male[data$male == -99] <- NA
-
-boys <- which(data$male == 1)
-girls <- which(data$male == 0)
-
-height_boys <- data$height[boys, ]
-height_girls <- data$height[girls, ]
-
-height_boys <- reshape2::melt(height_boys, na.rm = TRUE)
-height_boys <- height_boys[, 2:3]
-colnames(height_boys) <- c("age", "height")
-height_boys$sex <- "boys"
-
-height_girls <- reshape2::melt(height_girls, na.rm = TRUE)
-height_girls <- height_girls[, 2:3]
-colnames(height_girls) <- c("age", "height")
-height_girls$sex <- "girls"
 
 weight <- matrix(nrow = n, ncol = 19)
 
@@ -215,21 +176,7 @@ for (i in 1:n) {
   }
 }
 
-# height -99 to NA for the calculation
-height[height == -99] <- NA
-
-# height from cm to m
-height <- height / 100
-
-# bmi -> kg/m^2
-bmi <- weight / (height*height)
-
-data$weight <- bmi
-
-# turn skips to NA's because we don't model them
-# data$weight[data$skip == 1] <- NA
-
-data$male[data$male == -99] <- NA
+data$weight <- weight
 
 boys <- which(data$male == 1)
 girls <- which(data$male == 0)
@@ -261,7 +208,7 @@ mother_dead_check <- mother_dead_check[which(complete.cases(mother_dead_check)),
 
 # extract samples
 
-post <- extract.samples(fit)
+post <- as_draws_rvars(fit)
 
 # plot parent random effects
 
@@ -272,15 +219,15 @@ png("output/figures/weight_mother_random_effects.png",
 
 par(mfrow = c(1, 3))
 
-plot(apply(post$a_father, 2, mean), 
+plot(apply(draws_of(post$a_father), 2, mean), 
      ylab = "father random effects",
      xlab = "")
 
-plot(apply(post$a_mother, 2, mean), 
+plot(apply(draws_of(post$a_mother), 2, mean), 
      ylab = "mother random effects",
      xlab = "")
 
-dens(post$father_sigma + post$mother_sigma, 
+dens(draws_of(post$father_sigma) + draws_of(post$mother_sigma), 
      xlab = "sum of variance on mother/father random effects")
 
 dev.off()
@@ -293,7 +240,7 @@ sex <- c("girls", "boys")
 
 for (s in 1:2) {
   
-  p <- post$m_base[ , s, ]
+  p <- draws_of(post$m_base)[ , s, ]
   
   plot_data[[s]] <- data.frame(age = 1:19, 
                                sex = sex[s],
@@ -314,7 +261,7 @@ a <-
   
 ggplot() +
   
-  labs(y = expression(paste("BMI ", (kg/m^2))), 
+  labs(y = expression(paste("weight ", (kg))), 
        x = "child age") +
   
   theme_linedraw() +
@@ -323,7 +270,7 @@ ggplot() +
             aes(x = age, 
                 y = offset,
                 color = sex),
-            size = 1.5) +
+            lwd = 1.5) +
   
   geom_ribbon(data = plot_data,
               aes(ymin = low, 
@@ -336,21 +283,21 @@ ggplot() +
   facet_grid(. ~ type, 
              scales = "free") +
   
-  ggtitle(expression(paste("A. Child BMI ", (kg/m^2)))) +
+  ggtitle(expression(paste("A. Child weight ", (kg)))) +
   
   theme(strip.text.x = element_text(size = 10, color = "white"), 
         strip.text.y = element_text(size = 10, color = "white", angle = 0), 
         axis.text = element_text(size = 10.5), 
         axis.title = element_text(size = 10.5),
         legend.key.size = unit(1, "cm"), 
-        legend.position = c(0.1, 0.85),
+        legend.position.inside = c(0.1, 0.85),
         legend.background = element_rect(linetype = "solid", 
                                          color = "black"),
         legend.text = element_text(size = 10), 
         legend.title = element_blank(), 
         plot.title = element_text(size = 13, face = "italic"),
-        panel.grid.major = element_line(colour = "grey70", size = 0.1),
-        panel.grid.minor = element_line(colour = "grey70", size = 0.05)) +
+        panel.grid.major = element_line(colour = "grey70", linewidth = 0.1),
+        panel.grid.minor = element_line(colour = "grey70", linewidth = 0.05)) +
   
   scale_color_manual(values = c("girls" = "goldenrod", 
                                 "boys" = "navy")) +
@@ -366,19 +313,19 @@ ggplot() +
              size = 1.5, 
              position = "jitter") +
   
-  geom_line(data = who_weight, 
-            aes(x = age, 
-                y = mean_weight, 
-                col = sex), 
-            lty = 2, 
-            lwd = 1) +
-  
   geom_point(data = mother_dead_check, 
              aes(x = age, 
                  y = weight),
              size = 2,
              col = col.alpha("red", 0.5))
 
+# geom_line(data = who_weight, 
+         # aes(x = age, 
+         #     y = mean_weight, 
+         #     col = sex), 
+         #  lty = 2, 
+         # lwd = 1) +
+  
 # plot age-specific parameters
 
 par_names <- c("intercept", 
@@ -389,7 +336,7 @@ plot_data <- list()
 
 for (i in 1:3) {
  
-  p <- post$a_age[, i, ]
+  p <- draws_of(post$a_age)[, i, ]
   
   plot_data[[i]] <- data.frame(age = 1:19, 
                                cat = par_names[i], 
@@ -435,7 +382,7 @@ ggplot(plot_data,
 
 # plot birth-order parameters
 
-p <- post$a_bo
+p <- draws_of(post$a_bo)
 
 plot_data <- data.frame(bo = 1:15, 
                         cat = "birth-order", 
@@ -477,7 +424,7 @@ c <-
 
 # plot birth-year parameters
 
-p <- post$a_year
+p <- draws_of(post$a_year)
 
 plot_data <- data.frame(year = 1976:2014, 
                         cat = "year", 
@@ -519,11 +466,11 @@ d <-
 
 # plot deviations from base-case on prediction scale
 
-post_list <- list(post$m_unknown_parent,
-                  post$m_mother_dead,
-                  post$m_mother_unmarried,
-                  post$m_mother_married_to_notfather,
-                  post$m_mother_married_to_father_with_cowife)
+post_list <- list(draws_of(post$m_unknown_parent),
+                  draws_of(post$m_mother_dead),
+                  draws_of(post$m_mother_unmarried),
+                  draws_of(post$m_mother_married_to_notfather),
+                  draws_of(post$m_mother_married_to_father_with_cowife))
 
 type <- c("either parent external", 
           "mother deceased",
@@ -535,7 +482,7 @@ plot_data <- list()
 
 for (z in 1:5) {
   
-  p <- post_list[[z]] - post$m_base
+  p <- post_list[[z]] - draws_of(post$m_base)
   # plot for boys
   p <- p[ , 2, ]
   
@@ -568,11 +515,11 @@ ggplot(plot_data,
   
   geom_pointrange(size = 0.6) +
   
-  ylim(-3, 7) +
+  ylim(-8, 18) +
   
   facet_grid(. ~ type) +
   
-  labs(y = expression(paste("contrast ", (kg/m^2))), 
+  labs(y = expression(paste("contrast ", (kg))), 
        x = "child age") +
   
   theme(strip.text.x = element_text(size = 10), 
@@ -600,15 +547,27 @@ ggplot(plot_data,
 
 # in text predictions
 
-mean(post$m_mother_dead[, 1, 16])
-HPDI(post$m_mother_dead[, 1, 16], 0.9)
+mean(draws_of(post$m_mother_dead)[, 1, 16])
+HPDI(draws_of(post$m_mother_dead)[, 1, 16], 0.9)
 
-mean(post$m_mother_dead[, 1, 16] - post$m_base[, 1, 16])
-HPDI(post$m_mother_dead[, 1, 16] - post$m_base[, 1, 16], 0.9)
+mean(draws_of(post$m_mother_dead)[, 1, 16] - draws_of(post$m_base)[, 1, 16])
+HPDI(draws_of(post$m_mother_dead)[, 1, 16] - draws_of(post$m_base)[, 1, 16], 0.9)
 
-# mother model
+# father model
 
 fit <- readRDS("stanfits/father_weight.rds")
+
+# extract samples
+
+posterior_samples <- fit$draws()
+mcmc_samples <- as_draws_df(posterior_samples)
+
+# check fit
+# plot trace of all main parameters
+
+parameter_names <- names(mcmc_samples)
+pattern <- "alpha|a_bo_tau|a_bo_kappa|a_bo_delta|a_year_tau|a_year_kappa|a_year_delta|a_age_tau\\[|a_age_delta\\[|a_age_kappa\\[|mother_sigma|father_sigma"
+matching_parameters <- grep(pattern, parameter_names, value = TRUE)
 
 # check fit
 
@@ -617,19 +576,8 @@ png("output/trace/father_weight.png",
     height = 3000, 
     width = 3000)
 
-print(traceplot(fit, pars = c("alpha",  
-                              "a_bo_tau", 
-                              "a_bo_kappa",
-                              "a_bo_delta",
-                              "a_year_tau", 
-                              "a_year_kappa",
-                              "a_year_delta",
-                              "a_age_tau",
-                              "a_age_delta",
-                              "a_age_kappa",
-                              "father_sigma",
-                              "mother_sigma",
-                              "sum_parent_sigma")))
+print(bayesplot::mcmc_trace(mcmc_samples, pars = matching_parameters))
+
 dev.off()
 
 # print summary table
@@ -665,6 +613,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\tau_8}$",
                    "$\\beta_{\\tau_9}$",
                    "$\\beta_{\\tau_{10}}$",
+                   "$\\beta_{\\tau_{11}}$",                
                    "$\\beta_{\\kappa_1}$",
                    "$\\beta_{\\kappa_2}$",
                    "$\\beta_{\\kappa_3}$",
@@ -675,6 +624,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\kappa_8}$",
                    "$\\beta_{\\kappa_9}$",
                    "$\\beta_{\\kappa_{10}}$",
+                   "$\\beta_{\\kappa_{11}}$",
                    "$\\beta_{\\delta_1}$",
                    "$\\beta_{\\delta_2}$",
                    "$\\beta_{\\delta_3}$",
@@ -685,6 +635,7 @@ rownames(tab) <- c("$\\alpha$",
                    "$\\beta_{\\delta_8}$",
                    "$\\beta_{\\delta_9}$",
                    "$\\beta_{\\delta_{10}}$",
+                   "$\\beta_{\\delta_{11}}$",
                    "$\\kappa_{\\sigma}$", 
                    "$\\eta_{\\sigma}$", 
                    "$\\pi_{\\sigma}$")
@@ -696,7 +647,7 @@ print(xtable(tab),
 
 # extract samples
 
-post <- extract.samples(fit)
+post <- as_draws_rvars(fit)
 
 # look at mother effects
 
@@ -707,26 +658,26 @@ png("output/figures/weight_father_random_effects.png",
 
 par(mfrow = c(1, 3))
 
-plot(apply(post$a_father, 2, mean), 
+plot(apply(draws_of(post$a_father), 2, mean), 
      ylab = "father random effects",
      xlab = "")
 
-plot(apply(post$a_mother, 2, mean), 
+plot(apply(draws_of(post$a_mother), 2, mean), 
      ylab = "mother random effects",
      xlab = "")
 
-dens(post$father_sigma + post$mother_sigma, 
+dens(draws_of(post$father_sigma) + draws_of(post$mother_sigma), 
      xlab = "sum of variance on mother/father random effects")
 
 dev.off()
 
 # plot deviations from base-case on prediction scale
 
-post_list <- list(post$m_father_dead,
-                  post$m_father_unmarried,
-                  post$m_father_married_to_notmother_monogamy,
-                  post$m_father_married_to_notmother_polygyny,
-                  post$m_father_married_to_mother_polygyny)
+post_list <- list(draws_of(post$m_father_dead),
+                  draws_of(post$m_father_unmarried),
+                  draws_of(post$m_father_married_to_notmother_monogamy),
+                  draws_of(post$m_father_married_to_notmother_polygyny),
+                  draws_of(post$m_father_married_to_mother_polygyny))
 
 type <- c("father deceased", 
           "father unmarried",
@@ -738,7 +689,7 @@ plot_data <- list()
 
 for (z in 1:5) {
   
-  p <- post_list[[z]] - post$m_base
+  p <- post_list[[z]] - draws_of(post$m_base)
   # plot for boys
   p <- p[ , 2, ]
   
@@ -769,13 +720,13 @@ ggplot(plot_data,
   
   theme_linedraw() +
   
-  ylim(-3, 7) +
+  ylim(-8, 18) +
   
   geom_pointrange(size = 0.6) +
   
   facet_wrap(. ~ type, ncol = 5) +
   
-  labs(y = expression(paste("contrast ", (kg/m^2))), 
+  labs(y = expression(paste("contrast ", (kg))), 
        x = "child age") +
   
   theme(strip.text.x = element_text(size = 10), 
@@ -803,14 +754,14 @@ ggplot(plot_data,
 
 # produce estimates reported in text
 
-mean(post$m_father_dead[, 1, 19] - post$m_base[, 1, 19])
-HPDI(post$m_father_dead[, 1, 19] - post$m_base[, 1, 19], 0.9)
+mean(draws_of(post$m_father_dead)[, 1, 19] - draws_of(post$m_base)[, 1, 19])
+HPDI(draws_of(post$m_father_dead)[, 1, 19] - draws_of(post$m_base)[, 1, 19], 0.9)
 
-mean(post$m_father_married_to_notmother_monogamy[, 1, 19] - post$m_base[, 1, 19])
-HPDI(post$m_father_married_to_notmother_monogamy[, 1, 19] - post$m_base[, 1, 19], 0.9)
+mean(draws_of(post$m_father_married_to_notmother_monogamy)[, 1, 19] - draws_of(post$m_base)[, 1, 19])
+HPDI(draws_of(post$m_father_married_to_notmother_monogamy)[, 1, 19] - draws_of(post$m_base)[, 1, 19], 0.9)
 
-mean(post$m_base[, 1, 19] - post$m_father_married_to_mother_polygyny[, 1, 19])
-HPDI(post$m_base[, 1, 19] - post$m_father_married_to_mother_polygyny[, 1, 19], 0.9)
+mean(draws_of(post$m_base)[, 1, 19] - draws_of(post$m_father_married_to_mother_polygyny)[, 1, 19])
+HPDI(draws_of(post$m_base)[, 1, 19] - draws_of(post$m_father_married_to_mother_polygyny)[, 1, 19], 0.9)
 
 # plot them all
 
@@ -847,11 +798,11 @@ tmp <- plot_grid(e,
 
 tmp2 <- plot_grid(a, 
                   tmp,
-                  rel_widths = c(1.5, 3, 3))
+                  rel_widths = c(1.7, 3, 3))
 
 pdf("output/figures/weight.pdf",
     height = 5.5, 
-    width = 14.6)
+    width = 16)
 
 print(tmp2)
 

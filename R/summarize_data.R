@@ -894,3 +894,21 @@ length(which(is.na(ppl[ppl$id %in% ids_with_edu, ]$mother_id))) # 53
 
 sum(ppl[ppl$id %in% ids_with_edu, ]$male) # 667
 sum(!ppl[ppl$id %in% ids_with_edu, ]$male) # 703
+
+# why do we have more measures in the obs table than when we split by age
+# is this only because of duplicated measurements for a single age?
+# my loop is always using the second measure made
+
+length(which(!is.na(obs[obs$id %in% ids_with_edu & obs$age < 20, ]$edu)))
+length(which(!is.na(obs[obs$id %in% ids_with_height & obs$age < 20, ]$height)))
+
+sum(apply(edu, 2, function(x) length(which(!is.na(x)))))
+sum(apply(height, 2, function(x) length(which(!is.na(x)))))
+
+# check how many obs have a duplicated id/year combo
+obs$idyear <- paste(obs$id, obs$year)
+sum(duplicated(obs[obs$id %in% ids_with_edu, ]$idyear))
+3845 - 3693
+
+sum(duplicated(obs[obs$id %in% ids_with_height, ]$idyear))
+1922 - 1744

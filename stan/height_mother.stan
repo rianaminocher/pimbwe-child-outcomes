@@ -29,25 +29,41 @@ int Y;
 int I;
 int L;
 
-real height [N, A];
+array [N, A] real height;
 
-int birthorder [N];
-int dob [N]; 
+array [N] int birthorder;
+array [N] int dob; 
 
-int male [N];
-int twin [N];
+array [N] int male;
+array [N] int twin;
 
-int mother_id [N];
-int father_id [N];
+array [N] int mother_id;
+array [N] int father_id;
 
-int father_dead [N, A];
-int mother_dead [N, A];
-int mother_unmarried [N, A];
-int mother_married_to_notfather [N, A];
-int mother_married_to_father_with_cowife [N, A];
+array [N, A] int father_dead;
+array [N, A] int mother_dead;
+array [N, A] int mother_unmarried;
+array [N, A] int mother_married_to_notfather;
+array [N, A] int mother_married_to_father_with_cowife;
 
-int skip [N, A];
+array [N, A] int skip;
 
+}
+
+transformed data {
+
+  array [N, A] real log_height;
+  
+  for (n in 1:N) {
+    for (a in 1:A) {
+
+      if (height[n, a] != -99){
+        log_height[n, a] = log(height[n, a]);
+      }
+
+    }
+  } 
+  
 }
 
 parameters {
@@ -73,10 +89,10 @@ real <lower = 0, upper = 1> a_year_kappa;
 real <lower = 0> a_year_tau;
 real <lower = 0> a_year_delta;
 
-vector [A] a_age_raw [9];
-real <lower = 0, upper = 1> a_age_kappa [9];
-real <lower = 0> a_age_tau [9];
-real <lower = 0> a_age_delta [9];
+array [9] vector [A] a_age_raw;
+vector <lower = 0, upper = 1> [9] a_age_kappa;
+vector <lower = 0> [9] a_age_tau;
+vector <lower = 0> [9] a_age_delta;
 
 }
 
@@ -84,7 +100,7 @@ transformed parameters {
 
 vector [B] a_bo;
 vector [Y] a_year;
-vector [A] a_age [9];
+array [9] vector [A] a_age;
 
 a_bo = GP(B, a_bo_kappa, a_bo_tau, a_bo_delta) * a_bo_raw;
 a_bo[16] = miss_birth_order;
@@ -138,7 +154,7 @@ for (n in 1:N) {
 
             if (skip[n, a] == 0) {
 
-                  height[n, a] ~ gamma(exp(
+                  log_height[n, a] ~ normal(
                   alpha + 
                   a_bo[birthorder[n]] +
                   a_year[dob[n] + (a-1)] + 
@@ -151,14 +167,14 @@ for (n in 1:N) {
                   a_age[5, a] * mother_dead[n, a] +
                   a_age[6, a] * mother_unmarried[n, a] +
                   a_age[7, a] * mother_married_to_notfather[n, a] +
-                  a_age[8, a] * mother_married_to_father_with_cowife[n, a]
-                  ) * scale, scale);
+                  a_age[8, a] * mother_married_to_father_with_cowife[n, a],
+                  scale);
 
                 }
 
           if (skip[n, a] == 1) {
 
-            height[n, a] ~ gamma(exp(
+            log_height[n, a] ~ normal(
                   alpha + 
                   a_bo[birthorder[n]] +
                   a_year[dob[n] + (a-1)] + 
@@ -167,8 +183,8 @@ for (n in 1:N) {
                   a_age[1, a] + 
                   a_age[2, a] * male[n] + 
                   a_age[3, a] * twin[n] + 
-                  a_age[9, a]
-                  ) * scale, scale);
+                  a_age[9, a],
+                  scale);
 
           }
 
@@ -181,12 +197,12 @@ for (n in 1:N) {
 
 generated quantities {
 
-  vector [A] m_base [2];
-  vector [A] m_mother_dead [2];
-  vector [A] m_mother_unmarried [2];
-  vector [A] m_mother_married_to_notfather [2];
-  vector [A] m_mother_married_to_father_with_cowife [2];
-  vector [A] m_unknown_parent [2];
+  array [2] vector [A] m_base;
+  array [2] vector [A] m_mother_dead;
+  array [2] vector [A] m_mother_unmarried;
+  array [2] vector [A] m_mother_married_to_notfather;
+  array [2] vector [A] m_mother_married_to_father_with_cowife;
+  array [2] vector [A] m_unknown_parent;
 
   real sum_parent_sigma;
   sum_parent_sigma = mother_sigma + father_sigma;

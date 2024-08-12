@@ -4,6 +4,7 @@ library(ggplot2)
 library(rethinking)
 library(cmdstanr)
 library(rstan)
+library(bayesplot)
 
 seed <- 1312
 

@@ -18,6 +18,14 @@ functions {
     return delta * cholesky_decompose(omega);
   }
 
+ int zerotruncated_poisson_rng(real lambda) {
+    real u = uniform_rng(exp(-lambda), 1);
+    real t = -log(u);
+    int k = 1 + poisson_rng(lambda - t);
+
+    return k; 
+  }
+
 }
 
 data {
@@ -29,24 +37,24 @@ int Y;
 int I;
 int L;
 
-int edu [N, A];
+array [N, A] int edu;
 
-int birthorder [N];
-int dob [N]; 
+array [N] int birthorder;
+array [N] int dob; 
 
-int male [N];
-int twin [N];
+array [N] int male;
+array [N] int twin;
 
-int mother_id [N];
-int father_id [N];
+array [N] int mother_id;
+array [N] int father_id;
 
-int father_dead [N, A];
-int mother_dead [N, A];
-int mother_unmarried [N, A];
-int mother_married_to_notfather [N, A];
-int mother_married_to_father_with_cowife [N, A];
+array [N, A] int father_dead;
+array [N, A] int mother_dead;
+array [N, A] int mother_unmarried;
+array [N, A] int mother_married_to_notfather;
+array [N, A] int mother_married_to_father_with_cowife;
 
-int skip [N, A];
+array [N, A] int skip;
 
 }
 
@@ -89,15 +97,15 @@ real <lower = 0> a_year_tau_l;
 real <lower = 0> a_year_delta_t;
 real <lower = 0> a_year_delta_l;
 
-vector [A] a_age_raw_t [9];
-vector [A] a_age_raw_l [9];
+array [9] vector [A] a_age_raw_t;
+array [9] vector [A] a_age_raw_l;
 
-real <lower = 0, upper = 1> a_age_kappa_t [9];
-real <lower = 0, upper = 1> a_age_kappa_l [9];
-real <lower = 0> a_age_tau_t [9];
-real <lower = 0> a_age_tau_l [9];
-real <lower = 0> a_age_delta_t [9];
-real <lower = 0> a_age_delta_l [9];
+vector <lower = 0, upper = 1> [9] a_age_kappa_t;
+vector <lower = 0, upper = 1> [9] a_age_kappa_l;
+vector <lower = 0> [9] a_age_tau_t;
+vector <lower = 0> [9] a_age_tau_l;
+vector <lower = 0> [9] a_age_delta_t;
+vector <lower = 0> [9] a_age_delta_l;
 
 }
 
@@ -109,8 +117,8 @@ vector [B] a_bo_l;
 vector [Y] a_year_t;
 vector [Y] a_year_l;
 
-vector [A] a_age_t [9];
-vector [A] a_age_l [9];
+array [9] vector [A] a_age_t;
+array [9] vector [A] a_age_l;
 
 a_bo_t = GP(B, a_bo_kappa_t, a_bo_tau_t, a_bo_delta_t) * a_bo_raw_t;
 a_bo_l = GP(B, a_bo_kappa_l, a_bo_tau_l, a_bo_delta_l) * a_bo_raw_l;
@@ -222,14 +230,11 @@ for (n in 1:N) {
               a_age_l[7, a] * mother_married_to_notfather[n, a] +
               a_age_l[8, a] * mother_married_to_father_with_cowife[n, a]);
 
-            	if (edu[n, a] == 0) {
-
-              target += log_sum_exp(log(theta), log1m(theta) + poisson_lpmf(edu[n, a] | lambda)); 
-
+              if (edu[n, a] == 0) {
+                target += log(theta);
               } else {
-
-            	    target += log1m(theta) + poisson_lpmf(edu[n, a] | lambda);
-            	}
+                target += log1m(theta) + poisson_lpmf(edu[n, a] | lambda) - log1m_exp(-lambda);
+              }
 
             } // skip
 
@@ -260,19 +265,15 @@ for (n in 1:N) {
                   	a_age_l[3, a] * twin[n] + 
                   	a_age_l[9, a]);
 
-                  	if (edu[n, a] == 0) {
-
-                  	target += log_sum_exp(log(theta), log1m(theta) + poisson_lpmf(edu[n, a] | lambda)); 
-
-                    } else {
- 
-                  		target += log1m(theta) + poisson_lpmf(edu[n, a] | lambda);
-
-                  	}
+              if(edu[n, a] == 0){
+                target += log(theta);
+              } else{
+                target += log1m(theta) + poisson_lpmf(edu[n, a] | lambda) - log1m_exp(-lambda);
+              }
 
             	}
 
-            }
+              }
 
         } // a
 
@@ -282,29 +283,29 @@ for (n in 1:N) {
 
 generated quantities {
 
-  vector [A] m_base_t [2];
-  vector [A] m_base_l [2];
-  vector [A] m_base [2];
+  array [2] vector [A] m_base_t;
+  array [2] vector [A] m_base_l;
+  array [2] vector [A] m_base;
 
-  vector [A] m_mother_dead_t [2];
-  vector [A] m_mother_dead_l [2];
-  vector [A] m_mother_dead [2];
+  array [2] vector [A] m_mother_dead_t;
+  array [2] vector [A] m_mother_dead_l;
+  array [2] vector [A] m_mother_dead;
 
-  vector [A] m_mother_unmarried_t [2];
-  vector [A] m_mother_unmarried_l [2];
-  vector [A] m_mother_unmarried [2];
+  array [2] vector [A] m_mother_unmarried_t;
+  array [2] vector [A] m_mother_unmarried_l;
+  array [2] vector [A] m_mother_unmarried;
 
-  vector [A] m_mother_married_to_notfather_t [2];
-  vector [A] m_mother_married_to_notfather_l [2];
-  vector [A] m_mother_married_to_notfather [2];
+  array [2] vector [A] m_mother_married_to_notfather_t;
+  array [2] vector [A] m_mother_married_to_notfather_l;
+  array [2] vector [A] m_mother_married_to_notfather;
 
-  vector [A] m_mother_married_to_father_with_cowife_t [2];
-  vector [A] m_mother_married_to_father_with_cowife_l [2];
-  vector [A] m_mother_married_to_father_with_cowife [2];
+  array [2] vector [A] m_mother_married_to_father_with_cowife_t;
+  array [2] vector [A] m_mother_married_to_father_with_cowife_l;
+  array [2] vector [A] m_mother_married_to_father_with_cowife;
 
-  vector [A] m_unknown_parent_t [2];
-  vector [A] m_unknown_parent_l [2];
-  vector [A] m_unknown_parent [2];
+  array [2] vector [A] m_unknown_parent_t;
+  array [2] vector [A] m_unknown_parent_l;
+  array [2] vector [A] m_unknown_parent;
 
   real sum_parent_sigma_t;
   sum_parent_sigma_t = mother_sigma_t + father_sigma_t;
@@ -328,7 +329,7 @@ generated quantities {
                            a_age_l[1, a] +
                            a_age_l[2, a] * (i-1));
 
-      m_base[i, a] = (1 - bernoulli_rng(m_base_t[i, a])) * poisson_rng(m_base_l[i, a]);
+      m_base[i, a] = (1- bernoulli_rng(m_base_t[i, a])) * zerotruncated_poisson_rng(m_base_l[i, a]);
  
       m_mother_dead_t[i, a] = inv_logit(alpha_t + 
                                  	      a_bo_t[1] + 
@@ -344,7 +345,7 @@ generated quantities {
                                   a_age_l[2, a] * (i-1) + // male or female offset (when i == 1, female, when i == 2 is male)
                                   a_age_l[5, a] * 1);
 
-      m_mother_dead[i, a] = (1 - bernoulli_rng(m_mother_dead_t[i, a])) * poisson_rng(m_mother_dead_l[i, a]);
+      m_mother_dead[i, a] = (1 - bernoulli_rng(m_mother_dead_t[i, a])) * zerotruncated_poisson_rng(m_mother_dead_l[i, a]);
 
       m_mother_unmarried_t[i, a] = inv_logit(alpha_t + 
                                      		     a_bo_t[1] + 
@@ -360,7 +361,7 @@ generated quantities {
                                        a_age_l[2, a] * (i-1) +
                                        a_age_l[6, a] * 1);
 
-      m_mother_unmarried[i, a] = (1 - bernoulli_rng(m_mother_unmarried_t[i, a])) * poisson_rng(m_mother_unmarried_l[i, a]);                                       
+      m_mother_unmarried[i, a] = (1 - bernoulli_rng(m_mother_unmarried_t[i, a])) * zerotruncated_poisson_rng(m_mother_unmarried_l[i, a]);                                       
 
       m_mother_married_to_notfather_t[i, a] = inv_logit(alpha_t + 
                                                         a_bo_t[1] + 
@@ -376,7 +377,7 @@ generated quantities {
                                                   a_age_l[2, a] * (i-1) +
                                                   a_age_l[7, a] * 1);
 
-      m_mother_married_to_notfather[i, a] = (1 - bernoulli_rng(m_mother_married_to_notfather_t[i, a])) * poisson_rng(m_mother_married_to_notfather_l[i, a]);   
+      m_mother_married_to_notfather[i, a] = (1 - bernoulli_rng(m_mother_married_to_notfather_t[i, a])) * zerotruncated_poisson_rng(m_mother_married_to_notfather_l[i, a]);   
 
       m_mother_married_to_father_with_cowife_t[i, a] = inv_logit(alpha_t + 
                                                                  a_bo_t[1] + 
@@ -392,7 +393,7 @@ generated quantities {
                                                            a_age_l[2, a] * (i-1) +
                                                            a_age_l[8, a] * 1);
 
-      m_mother_married_to_father_with_cowife[i, a] = (1 - bernoulli_rng(m_mother_married_to_father_with_cowife_t[i, a])) * poisson_rng(m_mother_married_to_father_with_cowife_l[i, a]);  
+      m_mother_married_to_father_with_cowife[i, a] = (1 - bernoulli_rng(m_mother_married_to_father_with_cowife_t[i, a])) * zerotruncated_poisson_rng(m_mother_married_to_father_with_cowife_l[i, a]);  
 
       m_unknown_parent_t[i, a] = inv_logit(alpha_t + 
       									                 a_bo_t[1] + 
@@ -408,7 +409,7 @@ generated quantities {
                                    a_age_l[2, a] * (i-1) +
                                    a_age_l[9, a]);
 
-      m_unknown_parent[i, a] = (1 - bernoulli_rng(m_unknown_parent_t[i, a])) * poisson_rng(m_unknown_parent_l[i, a]);  
+      m_unknown_parent[i, a] = (1 - bernoulli_rng(m_unknown_parent_t[i, a])) * zerotruncated_poisson_rng(m_unknown_parent_l[i, a]);  
 
     }
 

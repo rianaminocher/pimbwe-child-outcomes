@@ -147,24 +147,20 @@ data$skip <- skip
 
 # compile model
 
-m <- cmdstan_model("stan/survival_mother_twin.stan")
+m <- cmdstan_model("stan/survival_mother.stan")
 
 # fit model
 
 fit <- m$sample(data = data, 
-                chains = 1, 
-                refresh=1,
-                iter_warmup=1000,
-                iter_sampling=1000,
-                parallel_chains = 1, 
-                adapt_delta = 0.95,
-                max_treedepth = 12,
+                chains = 4, 
+                parallel_chains = 4, 
+                adapt_delta = 0.98,
+                max_treedepth = 13,
                 init = 0)
 
 # save fit
 
-fit <- rstan::read_stan_csv(fit$output_files())
-saveRDS(fit, "stanfits/mother_survival.rds")
+fit$save_object(file = "stanfits/mother_survival.rds")
 
 # 2: fit height model 
 
@@ -222,14 +218,12 @@ m <- cmdstan_model("stan/height_mother.stan")
 fit <- m$sample(data = data, 
                 chains = 4, 
                 parallel_chains = 4, 
-                adapt_delta = 0.95,
+                adapt_delta = 0.98,
                 max_treedepth = 13,
                 init = 0)
 
 # save fit
-
-fit <- rstan::read_stan_csv(fit$output_files())
-saveRDS(fit, "stanfits/mother_height.rds")
+fit$save_object(file = "stanfits/mother_height.rds")
 
 # 3: fit weight model
 
@@ -255,35 +249,23 @@ for (i in 1:n) {
   }
 }
 
-# convert weight to BMI
-
-# height -99 to NA for the calculation
-height[height == -99] <- NA
-
-# height from cm to m
-height <- height / 100
-
-# bmi -> kg/m^2
-bmi <- weight / (height*height)
-
-# there are definitely some height outliers which may explain bmis < 12
-# one bmi > 28
-
-data$height <- bmi
-names(data)[names(data) == "height"] <- "weight"
-
-range(data$weight, na.rm = TRUE) 
-# assume 12-30 is a reasonable range based on WHO growth standards
-
+data$weight <- weight
 # flag outliers:
-which(data$weight < 11, arr.ind = TRUE) # child 13 at age 6
-which(data$weight > 30, arr.ind = TRUE) # child 3294 at age 2
-
-# remove for now
-data$weight[which(data$weight < 11)] <- NA
-data$weight[which(data$weight > 30)] <- NA
-
+# which(data$weight < 11, arr.ind = TRUE) # child 13 at age 6
+# which(data$weight > 30, arr.ind = TRUE) # child 3294 at age 2
 data$weight[is.na(data$weight)] <- -99
+
+# are any weight measures non NA for missing sex kids?
+all(data$weight[which(data$male == -99), ] == -99) # all are -99
+
+# store median heights to compute predictions
+data$height[data$height == -99] <- NA
+data$mid_height_by_age = apply(data$height, 2, function(x) median(x, na.rm = TRUE))
+data$mid_height_by_age[1] = 55
+
+# turn height NA's to -99
+data$height[is.na(data$height)] = -99
+data$mid_height_by_age[is.na(data$mid_height_by_age)] = -99
 
 # compile model
 
@@ -294,14 +276,13 @@ m <- cmdstan_model("stan/weight_mother.stan")
 fit <- m$sample(data = data, 
                 chains = 4, 
                 parallel_chains = 4, 
-                adapt_delta = 0.95,
+                adapt_delta = 0.98,
                 max_treedepth = 13,
                 init = 0)
 
 # save fit
 
-fit <- rstan::read_stan_csv(fit$output_files())
-saveRDS(fit, "stanfits/mother_weight.rds")
+fit$save_object(file = "stanfits/mother_weight.rds")
 
 # 4: fit education model
 
@@ -361,6 +342,4 @@ fit <- m$sample(data = data,
                 init = 0)
 
 # save fit
-
-fit <- rstan::read_stan_csv(fit$output_files())
-saveRDS(fit, "stanfits/mother_education.rds")
+fit$save_object(file = "stanfits/mother_education.rds")

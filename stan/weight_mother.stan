@@ -29,25 +29,55 @@ int Y;
 int I;
 int L;
 
-real weight [N, A];
+array [N, A] real weight;
+array [N, A] real height;
 
-int birthorder [N];
-int dob [N]; 
+array [N] int birthorder;
+array [A] real mid_height_by_age;
 
-int male [N];
-int twin [N];
+array [N] int dob; 
 
-int mother_id [N];
-int father_id [N];
+array [N] int male;
+array [N] int twin;
 
-int father_dead [N, A];
-int mother_dead [N, A];
-int mother_unmarried [N, A];
-int mother_married_to_notfather [N, A];
-int mother_married_to_father_with_cowife [N, A];
+array [N] int mother_id;
+array [N] int father_id;
 
-int skip [N, A];
+array [N, A] int father_dead;
+array [N, A] int mother_dead;
+array [N, A] int mother_unmarried;
+array [N, A] int mother_married_to_notfather;
+array [N, A] int mother_married_to_father_with_cowife;
 
+array [N, A] int skip;
+
+}
+
+transformed data {
+
+  array [N, A] real log_weight;
+  array [N, A] real log_height;
+
+  for (n in 1:N) {
+    for (a in 1:A) {
+
+      if (weight[n, a] != -99){
+        log_weight[n, a] = log(weight[n, a]);
+      }
+
+    }
+  }
+  
+  for (n in 1:N) {
+    for (a in 1:A) {
+
+      if (height[n, a] != -99){
+        log_height[n, a] = log(height[n, a]);
+      }
+      
+    }
+  }
+  
 }
 
 parameters {
@@ -73,10 +103,10 @@ real <lower = 0, upper = 1> a_year_kappa;
 real <lower = 0> a_year_tau;
 real <lower = 0> a_year_delta;
 
-vector [A] a_age_raw [9];
-real <lower = 0, upper = 1> a_age_kappa [9];
-real <lower = 0> a_age_tau [9];
-real <lower = 0> a_age_delta [9];
+array [10] vector [A] a_age_raw;
+vector <lower = 0, upper = 1> [10] a_age_kappa;
+vector <lower = 0> [10] a_age_tau;
+vector <lower = 0> [10] a_age_delta;
 
 }
 
@@ -84,14 +114,14 @@ transformed parameters {
 
 vector [B] a_bo;
 vector [Y] a_year;
-vector [A] a_age [9];
+array [10] vector [A] a_age;
 
 a_bo = GP(B, a_bo_kappa, a_bo_tau, a_bo_delta) * a_bo_raw;
 a_bo[16] = miss_birth_order;
 
 a_year = GP(Y, a_year_kappa, a_year_tau, a_year_delta) * a_year_raw;
 
-for (i in 1:9) {
+for (i in 1:10) {
   a_age[i] = GP(A, a_age_kappa[i], a_age_tau[i], a_age_delta[i]) * a_age_raw[i];
 }
 
@@ -121,7 +151,7 @@ a_year_kappa ~ beta(12, 2);
 a_year_tau ~ exponential(1);
 a_year_delta ~ exponential(1);
 
-for (i in 1:9) {
+for (i in 1:10) {
 
   a_age_raw[i] ~ normal(0, 1);
   a_age_kappa[i] ~ beta(12, 2);
@@ -135,10 +165,11 @@ for (n in 1:N) {
       for (a in 1:A) {
 
         if (weight[n, a] != -99) { // if weight is not unknown
+          if (height[n, a] != -99) { // if height is not unknown
 
             if (skip[n, a] == 0) {
 
-                  weight[n, a] ~ gamma(exp(
+                  log_weight[n, a] ~ normal(
                   alpha + 
                   a_bo[birthorder[n]] +
                   a_year[dob[n] + (a-1)] + 
@@ -151,14 +182,15 @@ for (n in 1:N) {
                   a_age[5, a] * mother_dead[n, a] +
                   a_age[6, a] * mother_unmarried[n, a] +
                   a_age[7, a] * mother_married_to_notfather[n, a] +
-                  a_age[8, a] * mother_married_to_father_with_cowife[n, a]
-                  ) * scale, scale);
+                  a_age[8, a] * mother_married_to_father_with_cowife[n, a] +
+                  a_age[10, a] * log_height[n, a],
+                  scale);
 
                 }
 
           if (skip[n, a] == 1) {
 
-            weight[n, a] ~ gamma(exp(
+            log_weight[n, a] ~ normal(
                   alpha + 
                   a_bo[birthorder[n]] +
                   a_year[dob[n] + (a-1)] + 
@@ -167,9 +199,11 @@ for (n in 1:N) {
                   a_age[1, a] + 
                   a_age[2, a] * male[n] + 
                   a_age[3, a] * twin[n] + 
-                  a_age[9, a]
-                  ) * scale, scale);
+                  a_age[9, a] +
+                  a_age[10, a] * log_height[n, a],
+                  scale);
 
+            }
           }
 
         }
@@ -181,12 +215,12 @@ for (n in 1:N) {
 
 generated quantities {
 
-  vector [A] m_base [2];
-  vector [A] m_mother_dead [2];
-  vector [A] m_mother_unmarried [2];
-  vector [A] m_mother_married_to_notfather [2];
-  vector [A] m_mother_married_to_father_with_cowife [2];
-  vector [A] m_unknown_parent [2];
+  array [2] vector [A] m_base;
+  array [2] vector [A] m_mother_dead;
+  array [2] vector [A] m_mother_unmarried;
+  array [2] vector [A] m_mother_married_to_notfather;
+  array [2] vector [A] m_mother_married_to_father_with_cowife;
+  array [2] vector [A] m_unknown_parent;
 
   real sum_parent_sigma;
   sum_parent_sigma = mother_sigma + father_sigma;
@@ -195,48 +229,54 @@ generated quantities {
 
     for (i in 1:2) { // male or female
 
-      // predictions for a child born in year id 61, non-twin, other parent alive, of avg height
+      // median predictions for a child born in year id 61, non-twin, other parent alive, of avg height
 
       m_base[i, a] = exp(alpha +
                          a_bo[1] +
                          a_year[16 + (a-1)] +
                          a_age[1, a] +
-                         a_age[2, a] * (i-1));
+                         a_age[2, a] * (i-1) +
+                         a_age[10, a] * log(mid_height_by_age[a]));
 
       m_mother_dead[i, a] = exp(alpha + 
                                 a_bo[1] + 
                                 a_year[16 + (a-1)] +
                                 a_age[1, a] +
                                 a_age[2, a] * (i-1) + // male or female offset (when i == 1, female, when i == 2 is male)
-                                a_age[5, a] * 1);
+                                a_age[5, a] * 1 +
+                                a_age[10, a] * log(mid_height_by_age[a]));
 
       m_mother_unmarried[i, a] = exp(alpha + 
                                      a_bo[1] + 
                                      a_year[16 + (a-1)] +
                                      a_age[1, a] +
                                      a_age[2, a] * (i-1) +
-                                     a_age[6, a] * 1);
+                                     a_age[6, a] * 1 +
+                                     a_age[10, a] * log(mid_height_by_age[a]));
 
       m_mother_married_to_notfather[i, a] = exp(alpha + 
                                                 a_bo[1] + 
                                                 a_year[16 + (a-1)] +
                                                 a_age[1, a] +
                                                 a_age[2, a] * (i-1) +
-                                                a_age[7, a] * 1);
+                                                a_age[7, a] * 1 +
+                                                a_age[10, a] * log(mid_height_by_age[a]));
 
       m_mother_married_to_father_with_cowife[i, a] = exp(alpha + 
                                                          a_bo[1] + 
                                                          a_year[16 + (a-1)] +
                                                          a_age[1, a] +
                                                          a_age[2, a] * (i-1) +
-                                                         a_age[8, a] * 1);
+                                                         a_age[8, a] * 1 +
+                                                         a_age[10, a] * log(mid_height_by_age[a]));
 
       m_unknown_parent[i, a] = exp(alpha + 
                                    a_bo[1] + 
                                    a_year[16 + (a-1)] +
                                    a_age[1, a] +
                                    a_age[2, a] * (i-1) +
-                                   a_age[9, a]);
+                                   a_age[9, a] * 1 +
+                                   a_age[10, a] * log(mid_height_by_age[a]));
 
     }
 
