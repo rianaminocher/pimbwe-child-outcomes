@@ -3,7 +3,7 @@ Pimbwe parent marriage status and child health outcomes
 
 This repository contains code to reproduce results from:
 
-Age-specific impacts of time-varying family structures on on children's well-being in Mpimbwe, Tanzania --- Riana Minocher, Monique Borgerhoff Mulder, Cody T. Ross
+Limited evidence to suggest that non-monogamous family structures are detrimental to children's well-being in Mpimbwe, Tanzania --- Riana Minocher, Monique Borgerhoff Mulder, Cody T. Ross
 
 The code was written in R (v4.0.4) and Stan. Statistical models are fit using the Stan engine in R, implemented with the `cmdstanr` package (0.5.2), which requires a C++ compiler. Installation instructions are available at https://mc-stan.org/cmdstanr/. 
 
